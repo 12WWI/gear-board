@@ -1,0 +1,1353 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<title>器材調度板</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ECEEF1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1113" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="器材調度">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+/* Layout: native-style phone app — translucent top nav, large titles, grouped lists; pushed detail screens hide the tab bar and pin one primary action to the bottom. Look: road-case aluminum + gaffer-tape labels; phase colors = 抓貨 orange, 演出中 blue, 歸還 green. */
+:root{
+  --bg:#ECEEF1; --surface:#FFFFFF; --surface2:#F4F6F8; --ink:#15181B; --muted:#5F6770; --line:#D9DDE2;
+  --accent:#C9701E; --accent-ink:#FFFFFF; --accent-soft:#F6E3CF;
+  --show:#2C6AAE; --show-soft:#DCE7F4;
+  --tape:#F2EDE0; --tape-ink:#1C1A16; --tape-edge:#DCD4BF;
+  --ok:#2E8457; --ok-soft:#DAEFE2; --bad:#C23B2A; --bad-soft:#F8DED9; --warn:#9C6410; --warn-soft:#F7E8CC;
+  --glass:rgba(248,249,250,.88); --scrim:rgba(10,12,14,.48); --on-strong:#FFFFFF;
+  --shadow:0 1px 2px rgba(20,24,28,.06),0 6px 18px rgba(20,24,28,.07);
+  --f-display:"Barlow Condensed","Noto Sans TC",system-ui,sans-serif;
+  --f-body:"Noto Sans TC",system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1113; --surface:#1A1D20; --surface2:#23272B; --ink:#ECEEF0; --muted:#9AA2AB; --line:#2D3237;
+  --accent:#E8913E; --accent-ink:#1A1206; --accent-soft:#3A2814;
+  --show:#6EA8E6; --show-soft:#152638;
+  --tape:#E6DFCC; --tape-ink:#1C1A16; --tape-edge:#C9C0A8;
+  --ok:#55B983; --ok-soft:#163124; --bad:#F06A57; --bad-soft:#3D1D18; --warn:#E3AA45; --warn-soft:#3A2B10;
+  --glass:rgba(22,24,27,.88); --scrim:rgba(0,0,0,.6); --on-strong:#0F1113;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0F1113; --surface:#1A1D20; --surface2:#23272B; --ink:#ECEEF0; --muted:#9AA2AB; --line:#2D3237;
+  --accent:#E8913E; --accent-ink:#1A1206; --accent-soft:#3A2814;
+  --show:#6EA8E6; --show-soft:#152638;
+  --tape:#E6DFCC; --tape-ink:#1C1A16; --tape-edge:#C9C0A8;
+  --ok:#55B983; --ok-soft:#163124; --bad:#F06A57; --bad-soft:#3D1D18; --warn:#E3AA45; --warn-soft:#3A2B10;
+  --glass:rgba(22,24,27,.88); --scrim:rgba(0,0,0,.6); --on-strong:#0F1113;
+  --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark;
+}
+[hidden]{display:none!important}
+html,body{min-height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-display);font-variant-numeric:tabular-nums}
+.pad{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+svg.i{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.topnav{position:fixed;top:0;left:0;right:0;z-index:20;padding-top:env(safe-area-inset-top,0px);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;height:calc(48px + env(safe-area-inset-top,0px));box-sizing:border-box;border-bottom:1px solid transparent;transition:background .15s,border-color .15s}
+.topnav.show{background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom-color:var(--line)}
+.topnav .tt{font-weight:700;font-size:16px;opacity:0;transition:opacity .15s;max-width:56vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.topnav.show .tt{opacity:1}
+.navback{justify-self:start;border:0;background:transparent;color:var(--accent);font-size:16px;display:flex;align-items:center;gap:0;padding:6px 4px 6px 0}
+.navmore{justify-self:end;border:0;background:transparent;color:var(--accent);width:40px;height:40px;display:grid;place-items:center}
+
+main{padding-block:52px calc(170px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px;max-width:720px;margin:0 auto}
+.screen-in{animation:pushin .24s ease-out}
+@keyframes pushin{from{transform:translateX(30px);opacity:.3}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.screen-in,.sheet{animation:none!important}}
+
+.lt{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding-top:4px}
+.lt h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:36px;line-height:1.05;letter-spacing:.01em}
+.lt p{margin:4px 0 0;color:var(--muted);font-size:13.5px}
+.me{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);object-fit:cover;flex:none}
+.banner{border:1px dashed var(--warn);background:var(--surface);border-radius:12px;padding:10px 12px;font-size:13.5px}
+
+.sec{display:flex;flex-direction:column;gap:8px}
+.sech{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 4px;min-height:28px}
+.sech h2{margin:0;font-family:var(--f-display);font-size:14px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.link{border:0;background:transparent;color:var(--accent);font-weight:500;font-size:14px;padding:4px 0}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;border-bottom:1px solid var(--line);width:100%;box-sizing:border-box;background:transparent;text-align:left;min-height:54px}
+.row:last-child{border-bottom:0}
+button.row:active,label.row:active{background:var(--surface2)}
+.rn{flex:1;min-width:0;overflow-wrap:anywhere}
+.rn small{display:block;color:var(--muted);font-size:12.5px;line-height:1.4;margin-top:1px}
+.rq{font-family:var(--f-display);font-size:24px;font-weight:700;line-height:1;white-space:nowrap}
+.rq small{font-family:var(--f-body);font-size:12px;color:var(--muted);font-weight:400;margin-left:3px}
+.chev{color:var(--muted);width:18px;height:18px}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:22px 18px;color:var(--muted);text-align:center;font-size:14px;background:var(--surface);line-height:1.6}
+
+.stub{flex:none;width:50px;display:flex;flex-direction:column;align-items:center;padding-right:12px;border-right:1px dashed var(--line)}
+.stub b{font-family:var(--f-display);font-size:30px;font-weight:700;line-height:1}
+.stub small{font-size:11px;color:var(--muted);white-space:nowrap}
+.evname{display:block;font-weight:700;font-size:16px;line-height:1.35}
+.evsub{display:block;font-size:13px;color:var(--muted)}
+.badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:500;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.badge.pick{background:var(--accent-soft);color:var(--accent)}
+.badge.show{background:var(--show-soft);color:var(--show)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.bad{background:var(--bad-soft);color:var(--bad)}
+.badge.mute{background:var(--surface2);color:var(--muted)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:10px 12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chips.wrap{flex-wrap:wrap;overflow:visible;padding:0}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:14px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.chip small{opacity:.7;margin-left:3px}
+.prow-add .plus{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:20px;font-weight:700}
+.prow-add[disabled]{opacity:.45}
+.tplcard{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1.5px dashed var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:14px;padding:14px 14px;margin-top:12px}
+.tplcard b{color:var(--accent)}
+.typetag{align-self:flex-start;font-size:12.5px;font-weight:700;border-radius:999px;padding:2px 10px;background:var(--accent-soft);color:var(--accent)}
+
+/* detail */
+.hero{display:flex;flex-direction:column;gap:6px;padding-top:6px}
+.tape{align-self:flex-start;max-width:100%;background:var(--tape);color:var(--tape-ink);border:1px solid var(--tape-edge);padding:2px 12px;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:.06em;transform:rotate(-1.2deg);clip-path:polygon(2% 0,98% 4%,100% 50%,98% 100%,1% 96%,0 50%);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hname{margin:2px 0 0;font-size:28px;line-height:1.25;font-weight:700;text-wrap:balance;overflow-wrap:anywhere}
+.hdate{margin:0;font-size:18px;color:var(--muted)}
+.hnote{margin:2px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);position:relative}
+.steps li{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:13px;color:var(--muted);position:relative;z-index:1}
+.steps li::before{content:"";position:absolute;top:13px;left:-50%;width:100%;height:3px;background:var(--line);z-index:-1}
+.steps li:first-child::before{display:none}
+.steps .dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:2px solid var(--line);font-family:var(--f-display);font-weight:700;font-size:15px}
+.steps li.past .dot{background:var(--ok);border-color:var(--ok);color:var(--on-strong)}
+.steps li.past::before,.steps li.cur::before{background:var(--ok)}
+.steps li.cur{color:var(--ink);font-weight:700}
+.steps li.cur.p-pick .dot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.steps li.cur.p-show .dot{background:var(--show);border-color:var(--show);color:var(--on-strong)}
+.steps li.cur.p-done .dot{background:var(--ok);border-color:var(--ok);color:var(--on-strong)}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.quick button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;color:var(--ink);padding:0}
+.quick .ic{width:50px;height:50px;border-radius:16px;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--accent);box-shadow:var(--shadow)}
+.alert{border:1px solid var(--bad);background:var(--bad-soft);color:var(--bad);border-radius:12px;padding:10px 12px;text-align:left;font-size:14px;font-weight:500}
+.progress{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.progress .top{display:flex;justify-content:space-between;align-items:baseline}
+.progress .top b{font-family:var(--f-display);font-size:26px;line-height:1}
+.progress .top span{font-size:13px;color:var(--muted)}
+.bar{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:4px;transition:width .25s}
+.bar.full i{background:var(--ok)}
+.seg{display:flex;background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;border-radius:8px;padding:7px 6px;font-size:14px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:700;box-shadow:var(--shadow)}
+.seg .cnt{background:var(--muted);color:var(--surface);border-radius:999px;font-size:11px;padding:0 6px;line-height:17px}
+.seg button[aria-pressed="true"] .cnt{background:var(--accent);color:var(--accent-ink)}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--surface2);flex:none}
+.stepper button{border:0;background:transparent;width:36px;height:36px;font-size:20px;line-height:1;color:var(--accent)}
+.stepper button:disabled{color:var(--muted);opacity:.35}
+.stepper input{width:40px;border:0;background:transparent;text-align:center;font-family:var(--f-display);font-size:19px;font-weight:700;padding:0}
+.row.zero .rn{text-decoration:line-through;color:var(--muted)}
+.cap{color:var(--muted)} .cap.low{color:var(--bad);font-weight:500}
+.addrow{display:flex;gap:8px;padding:10px 12px;background:var(--surface2)}
+.addrow input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px}
+
+.chk{position:relative;cursor:pointer}
+.chk input{position:absolute;opacity:0;width:1px;height:1px}
+.box{width:26px;height:26px;border-radius:8px;border:2px solid var(--line);flex:none;display:grid;place-items:center;background:var(--surface);transition:background .12s,border-color .12s}
+.box svg{width:17px;height:17px;stroke:var(--accent-ink);stroke-width:3;fill:none;opacity:0}
+.chk input:checked + .box{background:var(--accent);border-color:var(--accent)}
+.chk input:checked + .box svg{opacity:1}
+.chk input:focus-visible + .box{outline:2px solid var(--accent);outline-offset:2px}
+.pickrow .pickbox{display:flex;align-items:center;padding:0 0 0 14px;align-self:stretch}
+.pickrow .row{flex:1;min-width:0;border-bottom:0}
+.pickrow.picked .rn > span:first-child{color:var(--muted);text-decoration:line-through}
+.pickrow.picked .rq{color:var(--muted)}
+.chipline{display:flex!important;flex-wrap:wrap;gap:4px;margin-top:5px}
+.mphead{font-size:22px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.rem{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14.5px;cursor:pointer}
+.rem input{width:20px;height:20px;accent-color:var(--accent);flex:none}
+.tag.map{white-space:normal;flex:1 1 100%;order:5}
+.row.chosen{background:var(--accent-soft)}
+.prow{display:flex;align-items:center;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow .row{border-bottom:0;flex:1;min-width:0}
+.prow.sel{background:var(--accent-soft)}
+.mini{border:0;background:transparent;color:var(--muted);font-size:13px;padding:8px 14px;flex:none}
+.mini.armed{color:var(--bad);font-weight:700}
+.done .rn{color:var(--muted)}
+.ghead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:0 4px}
+.ghead button{border:0;background:transparent;padding:0;font-weight:700;font-size:16px;text-align:left;color:var(--ink);overflow-wrap:anywhere;min-width:0}
+.ghead span{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.loglist .row{min-height:0;padding:9px 14px;font-size:13.5px}
+
+.rep{align-items:flex-start}
+.rep img,.rep .noimg{width:62px;height:62px;border-radius:10px;object-fit:cover;flex:none;background:var(--surface2);display:grid;place-items:center;color:var(--muted)}
+.rt{display:block;font-weight:700}
+.ri{display:-webkit-box;font-size:13.5px;line-height:1.45;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rm{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;font-size:12px;color:var(--muted);margin-top:4px}
+.search{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 12px;color:var(--muted)}
+.search input{flex:1;min-width:0;border:0;background:transparent;padding:10px 0;color:var(--ink)}
+.search input:focus{outline:none}
+.stock{text-align:right;flex:none}
+.stock b{font-family:var(--f-display);font-size:24px;line-height:1}
+.stock b.low{color:var(--bad)}
+.stock small{display:block;font-size:11.5px;color:var(--muted)}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);transition:transform .2s}
+body.pushed nav.tabs{transform:translateY(110%)}
+nav.tabs button{flex:1;border:0;background:transparent;padding:7px 0 8px;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:11.5px;color:var(--muted);position:relative}
+nav.tabs svg.i{width:25px;height:25px}
+nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:700}
+.tb{position:absolute;top:3px;left:calc(50% + 7px);min-width:18px;height:18px;border-radius:9px;background:var(--bad);color:var(--on-strong);font-size:11px;font-weight:700;line-height:18px;text-align:center;padding:0 5px;box-sizing:border-box}
+.fab{position:fixed;z-index:24;right:calc(18px + env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border:0;border-radius:20px;background:var(--accent);color:var(--accent-ink);box-shadow:0 8px 22px rgba(0,0,0,.24);display:grid;place-items:center}
+.fab svg.i{width:28px;height:28px;stroke-width:2.2}
+.cbar{position:fixed;z-index:26;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom,0px));padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+body.pushed .cbar{bottom:0;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));padding-top:10px;background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+.cbar > div{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.cbar .pill{background:var(--ink);color:var(--bg);border-radius:16px;padding:8px 8px 8px 16px;box-shadow:0 10px 24px rgba(0,0,0,.25)}
+body.pushed .cbar .pill{box-shadow:none}
+.cbar span{flex:1;font-size:14px}
+.cta{flex:1;border:0;border-radius:14px;padding:15px;font-size:16.5px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
+.cta.p-pick{background:var(--accent);color:var(--accent-ink)}
+.cta.p-show{background:var(--show);color:var(--on-strong)}
+.cta.armed{background:var(--bad);color:var(--on-strong)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 16px;font-weight:700;font-size:15px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.45}
+.cbar .pill .btn.ghost{color:var(--bg);border-color:transparent}
+
+.scrim{position:fixed;inset:0;z-index:40;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:720px;max-height:calc(100% - 24px - env(safe-area-inset-top,0px));border-radius:20px 20px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(48px);opacity:.5}to{transform:none;opacity:1}}
+.grab{width:38px;height:5px;border-radius:3px;background:var(--line);margin:7px auto 0;flex:none}
+.sheet-head{display:grid;grid-template-columns:72px 1fr 72px;align-items:center;padding-block:6px 10px;border-bottom:1px solid var(--line)}
+.sheet-head h2{margin:0;text-align:center;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-head button{border:0;background:transparent;font-size:15px;padding:6px 0;text-align:left}
+.sheet-head .save{color:var(--accent);font-weight:700;text-align:right}
+.sheet-head .save:disabled{opacity:.4}
+.sheet-body{overflow-y:auto;padding-block:16px calc(28px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.sheet-body>*{flex-shrink:0}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field > label{font-size:12.5px;color:var(--muted);font-weight:500}
+.field input,.field textarea,.field select{background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:10px 12px;width:100%;box-sizing:border-box;min-width:0}
+.field textarea{resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{margin:0;font-size:12.5px;color:var(--muted);line-height:1.55}
+.err{margin:0;font-size:13.5px;color:var(--bad)}
+.danger{border:1px solid var(--bad);color:var(--bad);background:transparent;border-radius:12px;padding:11px;font-weight:500}
+.danger.armed{background:var(--bad);color:var(--on-strong)}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap}
+.btnrow .btn{flex:1}
+.filebtn{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--accent);color:var(--accent);border-radius:12px;padding:12px;font-weight:500;cursor:pointer;background:var(--surface)}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.thumb{max-height:220px;width:auto;max-width:100%;border-radius:12px;border:1px solid var(--line);align-self:flex-start}
+.aibusy{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14px}
+.aibusy span{flex:1}
+.dot3{display:inline-flex;gap:4px;flex:none!important}
+.dot3 i{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 1s infinite}
+.dot3 i:nth-child(2){animation-delay:.2s}.dot3 i:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,100%{opacity:.25}50%{opacity:1}}
+.irow{display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.irow:last-child{border-bottom:0}
+.irow .iname{flex:1 1 140px;min-width:0;border:1px solid var(--line);background:var(--surface2);border-radius:9px;padding:8px 10px}
+.irow .inote{flex-basis:100%;font-size:12px;color:var(--muted);padding-left:2px}
+.tag{font-size:11px;border-radius:6px;padding:1px 6px;flex:none}
+.tag.old{background:var(--ok-soft);color:var(--ok)}
+.tag.new{background:var(--accent-soft);color:var(--accent)}
+.tag.low{background:var(--bad-soft);color:var(--bad)}
+.xbtn{border:0;background:transparent;color:var(--muted);font-size:20px;width:30px;height:30px;flex:none}
+.statusseg button[data-st="open"][aria-pressed="true"]{color:var(--bad)}
+.statusseg button[data-st="fixing"][aria-pressed="true"]{color:var(--warn)}
+.statusseg button[data-st="done"][aria-pressed="true"]{color:var(--ok)}
+.bigimg{width:100%;max-height:340px;object-fit:contain;border-radius:12px;background:var(--surface2);border:1px solid var(--line)}
+.kv{display:flex;flex-direction:column;gap:4px;font-size:14px}
+.kv div{display:flex;gap:10px}
+.kv b{font-weight:500;color:var(--muted);flex:none;width:64px}
+.rrow{padding:11px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.rrow:last-child{border-bottom:0}
+.rrow .top{display:flex;align-items:center;gap:10px}
+.rrow .ret{font-family:var(--f-display);font-size:22px;font-weight:700;color:var(--ok);white-space:nowrap}
+.rrow .ret.part{color:var(--warn)}
+.rext{display:flex;flex-direction:column;gap:8px;background:var(--surface2);border-radius:10px;padding:8px 10px}
+.rl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rl > span{width:34px;font-size:13.5px;color:var(--muted);flex:none}
+.rl select{flex:1 1 120px;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px}
+.actions{display:flex;flex-direction:column;gap:8px;padding-block:12px calc(16px + env(safe-area-inset-bottom,0px))}
+.actions .list button{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;padding:15px 16px;font-size:16px;text-align:left}
+.actions .list button:last-child{border-bottom:0}
+.actions .list button svg{color:var(--accent)}
+.actions .list button.dangerous{color:var(--bad)} .actions .list button.dangerous svg{color:var(--bad)}
+.actions .list button small{display:block;font-size:12.5px;color:var(--muted)}
+.actions .cancel{border:0;background:var(--surface);border-radius:14px;padding:14px;font-size:16px;font-weight:700;color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:9px 18px;border-radius:999px;font-size:14px;max-width:calc(100% - 40px);text-align:center}
+.steps-ol{margin:0;padding-left:20px;font-size:14px;line-height:1.7}
+.field textarea[readonly]{background:var(--surface2);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+
+<div class="topnav pad" id="topnav"><button class="navback" id="navBack" type="button" hidden></button><div class="tt" id="navTitle"></div><button class="navmore" id="navMore" type="button" aria-label="更多動作" hidden></button></div>
+<main class="pad" id="view"><div class="empty">正在載入共用資料…</div></main>
+<div class="cbar" id="cbar" hidden><div id="cbarIn"></div></div>
+<button class="fab" id="fab" type="button" aria-label="新增" hidden></button>
+<nav class="tabs" aria-label="主選單" id="tabs"></nav>
+<datalist id="gearNames"></datalist><datalist id="venueNames"></datalist>
+<div id="sheetRoot"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const CATS=["喇叭","擴大機","混音台","無線","耳返","麥克風","樂器","架類","燈光","線材","雜項","其他"];
+/* 活動性質不寫在程式裡，來自自己匯入的資料和用過的性質 */
+const evTypes=()=>{const o=[...(S.templates.get("__types")?.list||[])];for(const k of S.templates.keys())if(k!=="__types"&&!o.includes(k))o.push(k);for(const e of S.events.values())if(e.type&&!o.includes(e.type))o.push(e.type);return o};
+const UNITS=["支","顆","台","箱","片","套","組","個","條","捲","只","隻","把","座","件","對","櫃","包"];
+const WD=["日","一","二","三","四","五","六"];
+const TABS=[["events","活動"],["pending","待補"],["repairs","維修"],["gear","庫存"]];
+const TN=Object.fromEntries(TABS);
+const PH={pick:["抓貨","pick"],show:["演出中","show"],done:["已歸還","ok"]};
+const IC={
+  cal:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>',
+  clip:'<svg class="i" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2.8h6V4M8.5 12.5l2.3 2.3 4.7-4.8"/></svg>',
+  wrench:'<svg class="i" viewBox="0 0 24 24"><path d="M13.7 6.3a4 4 0 0 0 5 5L20 13l-8 8-3-3 8-8-1.3-1.3a4 4 0 0 1-5-5L12 2.5l1.7 3.8z"/><path d="M4 20l5-5"/></svg>',
+  box:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5h8v2M3 12h18M10 12v3h4v-3"/></svg>',
+  plus:'<svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  imp:'<svg class="i" viewBox="0 0 24 24"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15"/></svg>',
+  edit:'<svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+  img:'<svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-9 9"/></svg>',
+  swap:'<svg class="i" viewBox="0 0 24 24"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5"/></svg>',
+  undo:'<svg class="i" viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12h-2" transform="translate(0 -6)"/></svg>',
+  info:'<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
+  truck:'<svg class="i" viewBox="0 0 24 24"><path d="M2.5 6h11v10h-11zM13.5 9.5h4l3.5 3.5v3h-7.5"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>',
+  home:'<svg class="i" viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h12V9.5"/></svg>',
+  more:'<svg class="i" viewBox="0 0 24 24" style="width:26px;height:26px"><circle cx="5.5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="18.5" cy="12" r="1.3" fill="currentColor"/></svg>',
+  chev:'<svg class="i chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+  back:'<svg class="i" viewBox="0 0 24 24" style="width:26px;height:26px"><path d="M15 5l-7 7 7 7"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  search:'<svg class="i" viewBox="0 0 24 24" style="width:18px;height:18px"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
+};
+
+let evTab="pick";try{evTab=localStorage.getItem("evTab")||"pick"}catch(_){}
+let gTab="hw";try{gTab=localStorage.getItem("gTab")||"hw"}catch(_){}
+const inGTab=g=>((g.category||"其他")==="線材")===(gTab==="cable");
+const S={gear:new Map(),events:new Map(),repairs:new Map(),templates:new Map(),tab:"events",detail:null,repTab:"open",gq:"",sel:new Set(),canWrite:true,dbOk:null,me:null,meAvatar:null,loaded:{g:0,e:0,r:0},scroll:{}};
+let db=null,user=null,sample=null,imagesOk=false,assets=null;
+
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+function fmt(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function parse(s){const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)}
+/* 測試用：網址加 ?today=2026-11-13 可以假裝今天是那天；?today= 留空就取消 */
+let TEST_TODAY="";
+try{const q=new URLSearchParams(location.search);if(q.has("today")){const v=q.get("today");if(v)sessionStorage.setItem("testToday",v);else sessionStorage.removeItem("testToday")}TEST_TODAY=sessionStorage.getItem("testToday")||""}catch(_){}
+if(!/^\d{4}-\d{2}-\d{2}$/.test(TEST_TODAY))TEST_TODAY="";
+function todayStr(){return TEST_TODAY||fmt(new Date())}
+function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return fmt(d)}
+function dayCount(a,b){return Math.round((parse(b)-parse(a))/864e5)+1}
+function md(s){const d=parse(s);return (d.getMonth()+1)+"/"+d.getDate()}
+function wdOf(s){return WD[parse(s).getDay()]}
+function rel(s){const t=todayStr();if(s===t)return"今天";if(s===addDays(t,1))return"明天";if(s===addDays(t,-1))return"昨天";return md(s)}
+function span(e){return e.start===e.end?`${md(e.start)}（${wdOf(e.start)}）`:`${md(e.start)}（${wdOf(e.start)}）→ ${md(e.end)}（${wdOf(e.end)}）`}
+function ago(iso){if(!iso)return"";const t=new Date(iso);if(isNaN(t))return"";const m=(Date.now()-t)/6e4;if(m<1)return"剛剛";if(m<60)return Math.floor(m)+" 分鐘前";if(m<1440)return Math.floor(m/60)+" 小時前";return (t.getMonth()+1)+"/"+t.getDate()}
+function esc(t){return String(t??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function validDate(s){return typeof s==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(s)}
+function now(){return new Date().toISOString()}
+function rid(){return Math.random().toString(36).slice(2,9)+Date.now().toString(36)}
+function buzz(){try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}}
+function norm(s){return String(s||"").toLowerCase().replace(/[\s\-_.·・,，、()（）\[\]【】\/]/g,"")}
+function matchGear(name){const n=norm(name);if(!n)return null;for(const[id,g]of S.gear){if(norm(g.name)===n)return id;if((g.aliases||[]).some(a=>norm(a)===n))return id}return null}
+function guessCat(n){
+  const s=String(n||"").toLowerCase();
+  if(/燈|dmx|光|搖頭|煙/.test(s))return"燈光";
+  if(/爵士鼓|套鼓|銅鈸|cymbal|木箱鼓|cajon|定音鼓|鍵盤|keyboard|鋼琴|piano|吉他|guitar|貝斯|音箱|管樂|弦樂|管弦|樂器|backline/.test(s))return"樂器";
+  if(/架/.test(s))return"架類";
+  if(/無線|手握|腰包|pack/.test(s))return"無線";
+  if(/耳返|iem/.test(s))return"耳返";
+  if(/喇叭|sub|超低|監聽|wedge|\d{2}吋/.test(s))return"喇叭";
+  if(/控台|混音|stage ?box|console/.test(s))return"混音台";
+  if(/擴大|amp/.test(s))return"擴大機";
+  if(/麥克風|mic|鼓組/.test(s))return"麥克風";
+  if(/線|xlr|cable|多芯|槽|snake/.test(s))return /槽/.test(s)?"雜項":"線材";
+  return"其他";
+}
+const phase=e=>PH[e?.phase]?e.phase:"pick";
+/* 顯示用階段：按了出發但還沒到進場日 = 已抓好（ready），到日期自動變演出中 */
+const stage=e=>{const p=phase(e);return p==="show"&&todayStr()<e.start?"ready":p};
+function itemsOf(e){return Object.entries(e.items||{}).filter(([,q])=>+q>0)}
+function pendList(e,st){return Object.entries(e.pending||{}).filter(([,p])=>p&&p.status===st)}
+function openPend(e){return pendList(e,"open").sort((a,b)=>String(a[1].at||"").localeCompare(String(b[1].at||"")))}
+function donePend(e){return pendList(e,"done").sort((a,b)=>String(b[1].doneAt||"").localeCompare(String(a[1].doneAt||"")))}
+function addedFor(e,gid){let n=0;for(const[,p]of pendList(e,"done"))if(p.gid===gid)n+=+p.qty||0;for(const[,l]of Object.entries(e.log||{}))if(l&&l.type==="in"&&l.gid===gid)n+=+l.qty||0;return n}
+function gName(gid,fb){return S.gear.get(gid)?.name||fb||"已刪除的設備"}
+function gUnit(gid){return S.gear.get(gid)?.unit||""}
+function sortedEvents(){return [...S.events].sort((a,b)=>a[1].start.localeCompare(b[1].start)||String(a[1].name).localeCompare(String(b[1].name),"zh-Hant"))}
+function catSort(a,b){const ia=CATS.indexOf(a),ib=CATS.indexOf(b);return (ia<0?99:ia)-(ib<0?99:ib)||a.localeCompare(b,"zh-Hant")}
+function groupByCat(gids){const m=new Map();for(const id of gids){const c=S.gear.get(id)?.category||"其他";if(!m.has(c))m.set(c,[]);m.get(c).push(id)}return [...m.keys()].sort(catSort).map(c=>[c,m.get(c).sort((a,b)=>gName(a).localeCompare(gName(b),"zh-Hant"))])}
+function openRepairs(){return [...S.repairs].filter(([,r])=>r.status!=="done")}
+function totalOpenPend(){let n=0;for(const[,e]of S.events)if(phase(e)!=="done")n+=openPend(e).length;return n}
+function overdue(e){return phase(e)==="show"&&e.end<todayStr()}
+const isPhoto=p=>typeof p==="string"&&/^data:image\//.test(p);
+function who(id){return id&&id===S.me?"你":id?"同事":"有人"}
+
+/* ---------- 本機資料庫 ----------
+   測試版先把資料存在這支手機（IndexedDB）。介面跟原型的共用資料庫一樣：
+   collection().doc().set / update（巢狀欄位合併）/ delete、add、onSnapshot。
+   之後換成 Firebase 時只要換掉這一段。 */
+function isObj(v){return v!==null&&typeof v==="object"&&!Array.isArray(v)}
+function deepMerge(a,b){const o=isObj(a)?{...a}:{};for(const[k,v]of Object.entries(b||{}))o[k]=isObj(v)?deepMerge(o[k],v):v;return o}
+const LDB=(()=>{
+  const COLS=["gear","events","repairs","templates"],data={},subs={};let idb=null;
+  COLS.forEach(c=>{data[c]=new Map();subs[c]=[]});
+  const req=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+  function tx(c,fn){return new Promise((res,rej)=>{const t=idb.transaction(c,"readwrite");fn(t.objectStore(c));t.oncomplete=()=>res();t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error)})}
+  function emit(c){const docs=[...data[c]].map(([id,v])=>({id,data:()=>structuredClone(v)}));subs[c].forEach(f=>{try{f({docs})}catch(e){console.error(e)}})}
+  async function write(c,id,v){await tx(c,s=>v==null?s.delete(id):s.put(v,id));if(v==null)data[c].delete(id);else data[c].set(id,v);emit(c)}
+  function doc(c,id){id=id||rid();return{id,
+    set:v=>write(c,id,structuredClone(v)),
+    update:v=>data[c].has(id)?write(c,id,deepMerge(data[c].get(id),structuredClone(v))):Promise.reject({code:"not_found"}),
+    delete:()=>write(c,id,null)}}
+  async function loadAll(obj){for(const c of COLS){if(c==="templates"&&!obj[c])continue;await tx(c,s=>{s.clear();for(const[id,v]of Object.entries(obj[c]||{}))s.put(v,id)});data[c]=new Map(Object.entries(obj[c]||{}));emit(c)}}
+  return{
+    async init(){
+      const r=indexedDB.open("gearboard",2);r.onupgradeneeded=()=>COLS.forEach(c=>{if(!r.result.objectStoreNames.contains(c))r.result.createObjectStore(c)});
+      idb=await req(r);
+      for(const c of COLS){const s=idb.transaction(c).objectStore(c),[keys,vals]=await Promise.all([req(s.getAllKeys()),req(s.getAll())]);data[c]=new Map(keys.map((k,i)=>[k,vals[i]]))}
+      let seeded=false;try{seeded=localStorage.getItem("seeded")==="1"}catch(_){}
+      if(!seeded&&!data.gear.size&&!data.events.size){try{const res=await fetch("seed.json",{cache:"no-store"});if(res.ok)await loadAll(await res.json())}catch(_){}}
+      try{localStorage.setItem("seeded","1")}catch(_){}
+    },
+    collection:c=>({doc:id=>doc(c,id),add:v=>{const d=doc(c);return d.set(v).then(()=>d)},onSnapshot(fn){subs[c].push(fn);setTimeout(()=>fn({docs:[...data[c]].map(([id,v])=>({id,data:()=>structuredClone(v)}))}));return()=>{subs[c]=subs[c].filter(x=>x!==fn)}}}),
+    dump:()=>Object.fromEntries(COLS.map(c=>[c,Object.fromEntries(data[c])])),
+    restore:loadAll,
+  };
+})();
+
+/* ---------- 庫存計算 ----------
+   一場活動在「抓貨／演出中」都佔用它的器材（依日期）；演出中但過了撤場還沒歸還，視為一直佔用。
+   已歸還的活動不佔用。維修中的數量也從庫存扣掉。沒填總數量的器材不限制。 */
+function hasQty(g){return !!g&&typeof g.qty==="number"&&isFinite(g.qty)}
+function effEnd(e){return overdue(e)?"9999-12-31":e.end}
+function rangeOf(e){return[e.start,overdue(e)?todayStr():e.end]}
+function heldOn(day,gid,exclude){let n=0;for(const[id,e]of S.events){if(id===exclude||phase(e)==="done")continue;if(e.start<=day&&day<=effEnd(e))n+=+(e.items||{})[gid]||0}return n}
+function inRepair(gid){let n=0;for(const[,r]of S.repairs)if(r.status!=="done"&&r.gid===gid)n+=+r.qty||1;return n}
+function availFor(gid,start,end,exclude){
+  const g=S.gear.get(gid);if(!hasQty(g))return Infinity;
+  let peak=0;for(let d=start,i=0;d<=end&&i<400;d=addDays(d,1),i++)peak=Math.max(peak,heldOn(d,gid,exclude));
+  return Math.max(0,g.qty-inRepair(gid)-peak);
+}
+function outToday(gid){let n=0;const t=todayStr();for(const[,e]of S.events)if(phase(e)==="show"&&e.start<=t&&t<=effEnd(e))n+=+(e.items||{})[gid]||0;return n}
+
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(()=>t.hidden=true,2800)}
+function errMsg(e){
+  const c=e&&e.code;
+  if(c==="invalid_argument"){S.canWrite=false;render();return"你沒有編輯權限，這次修改沒有存到。"}
+  if(c==="quota_exceeded")return"資料庫滿了，先刪掉一些舊活動或維修紀錄再試。";
+  return"儲存失敗，請檢查網路後再試一次。";
+}
+async function W(fn){try{await fn();return true}catch(e){toast(errMsg(e));return false}}
+function arm(btn,label){if(btn.dataset.armed)return true;btn.dataset.armed="1";const old=btn.innerHTML;btn.textContent=label;btn.classList.add("armed");setTimeout(()=>{if(btn.isConnected&&btn.dataset.armed){delete btn.dataset.armed;btn.innerHTML=old;btn.classList.remove("armed")}},3500);return false}
+const evRef=id=>db.collection("events").doc(id);
+const stamp=()=>({updatedBy:S.me||null,updatedAt:now()});
+
+async function ensureGear(name,{category,unit}={}){
+  const id0=matchGear(name);if(id0)return id0;
+  const ref=db.collection("gear").doc();
+  const body={name:String(name).trim(),category:CATS.includes(category)?category:guessCat(name),unit:unit&&UNITS.includes(unit)?unit:"",qty:null,note:"",...stamp()};
+  S.gear.set(ref.id,body);await ref.set(body);return ref.id;
+}
+
+/* ---------- shell ---------- */
+function render(){
+  const v=$("view");
+  const a=document.activeElement,aid=a&&v.contains(a)?a.id:null,ss=aid&&"selectionStart"in a?a.selectionStart:null;
+  const ready=S.dbOk===false||(S.loaded.g&&S.loaded.e&&S.loaded.r);
+  if(S.detail&&ready&&!S.events.has(S.detail.id))S.detail=null;
+  document.body.classList.toggle("pushed",!!S.detail);
+  v.innerHTML=!ready?`<div class="empty">正在載入共用資料…</div>`:S.detail?viewDetail():S.tab==="events"?viewEvents():S.tab==="pending"?viewPending():S.tab==="repairs"?viewRepairs():viewGear();
+  if(aid){const el=$(aid);if(el){el.focus({preventScroll:true});try{if(ss!=null)el.setSelectionRange(ss,ss)}catch(_){}}}
+  updateNav();renderTabs();updateFab();updateBar();fillNames();
+}
+function updateNav(){
+  const nb=$("navBack"),nt=$("navTitle"),tn=$("topnav"),nm=$("navMore");
+  if(S.detail){const e=S.events.get(S.detail.id);nb.hidden=false;nb.innerHTML=IC.back+TN[S.tab];nt.textContent=e?.name||"";nm.hidden=!(S.canWrite&&S.dbOk!==false);nm.innerHTML=IC.more;tn.classList.add("show")}
+  else{nb.hidden=true;nm.hidden=true;nt.textContent=TN[S.tab];tn.classList.toggle("show",scrollY>40)}
+}
+window.addEventListener("scroll",()=>{if(!S.detail)$("topnav").classList.toggle("show",scrollY>40)},{passive:true});
+$("navBack").onclick=goBack;
+$("navMore").onclick=()=>detailMenu();
+/* 從左邊緣往右滑返回 */
+let sw=null;
+document.addEventListener("touchstart",e=>{if(!S.detail||$("sheetRoot").firstChild)return;const t=e.touches[0];if(t.clientX<28)sw={x:t.clientX,y:t.clientY}},{passive:true});
+document.addEventListener("touchend",e=>{if(!sw)return;const t=e.changedTouches[0];if(t.clientX-sw.x>70&&Math.abs(t.clientY-sw.y)<60)goBack();sw=null},{passive:true});
+function renderTabs(){
+  const badge={pending:totalOpenPend(),repairs:openRepairs().length};
+  $("tabs").innerHTML=TABS.map(([k,l])=>`<button type="button" data-tab="${k}" aria-current="${S.tab===k?"page":"false"}">${{events:IC.cal,pending:IC.clip,repairs:IC.wrench,gear:IC.box}[k]}${badge[k]?`<span class="tb">${badge[k]>99?"99+":badge[k]}</span>`:""}${l}</button>`).join("");
+}
+$("tabs").addEventListener("click",e=>{const b=e.target.closest("[data-tab]");if(!b)return;const same=S.tab===b.dataset.tab&&!S.detail;S.tab=b.dataset.tab;S.detail=null;S.sel.clear();render();window.scrollTo(0,same?0:(S.scroll[S.tab]||0))});
+function updateFab(){
+  const f=$("fab"),show=S.canWrite&&S.dbOk!==false&&!S.detail&&S.tab!=="pending"&&!S.sel.size;
+  f.hidden=!show;f.innerHTML=IC.plus;f.setAttribute("aria-label",S.tab==="events"?"新增活動":S.tab==="repairs"?"回報損壞":"新增器材");
+}
+$("fab").onclick=()=>{
+  if(S.tab==="events")openActions([
+    {icon:IC.img,label:"從截圖或文字建立",sub:"貼上 LINE 訊息或選截圖，自動整理成器材清單",fn:()=>openImport({mode:"new"})},
+    {icon:IC.edit,label:"手動新增活動",sub:"自己填名稱、日期，再加器材",fn:()=>openEventForm(null)},
+  ]);
+  else if(S.tab==="repairs")openRepairForm({});
+  else if(S.tab==="gear")openGearForm(null);
+};
+function updateBar(){
+  const bar=$("cbar"),inn=$("cbarIn");
+  if(S.detail&&S.detail.edit){bar.hidden=false;inn.innerHTML=`<div class="pill" style="flex:1;display:flex;align-items:center;gap:10px"><span>正在編輯器材清單</span><button class="btn ghost" type="button" data-bar="cancel">取消</button><button class="btn primary" type="button" data-bar="save">完成</button></div>`;return}
+  if(S.sel.size&&S.canWrite){bar.hidden=false;inn.innerHTML=`<div class="pill" style="flex:1;display:flex;align-items:center;gap:10px"><span>已勾選 ${S.sel.size} 項待補</span><button class="btn primary" type="button" data-bar="deliver">確認送達</button></div>`;return}
+  if(S.detail&&S.canWrite&&S.dbOk!==false){
+    const e=S.events.get(S.detail.id),p=e?stage(e):"";
+    if(e&&p==="ready"){bar.hidden=false;inn.innerHTML=`<div class="pill" style="flex:1;display:flex;align-items:center;gap:10px"><span>已抓好，${md(e.start)} 會自動變成演出中</span><button class="btn ghost" type="button" data-bar="unship">退回抓貨</button></div>`;return}
+    if(e&&p==="pick"){bar.hidden=false;inn.innerHTML=`<button class="cta p-pick" type="button" data-bar="ship">${IC.truck}抓完了，開始演出</button>`;return}
+    if(e&&p==="show"){bar.hidden=false;inn.innerHTML=`<button class="cta p-show" type="button" data-bar="return">${IC.home}歸還器材</button>`;return}
+  }
+  bar.hidden=true;inn.innerHTML="";
+}
+$("cbar").addEventListener("click",e=>{
+  const b=e.target.closest("[data-bar]");if(!b)return;const k=b.dataset.bar;
+  if(k==="cancel"){S.detail.edit=false;S.detail.draft=null;render()}
+  if(k==="save")saveDraft(b);
+  if(k==="deliver")deliver(b);
+  if(k==="ship")ship(b);
+  if(k==="return")openReturn(S.detail.id);
+  if(k==="unship")setPhase(S.detail.id,"pick");
+});
+async function fillNames(){
+  const els=[...document.querySelectorAll("[data-uid]")];if(!els.length||!user)return;
+  let ps={};try{ps=await user.profiles([...new Set(els.map(x=>x.dataset.uid))])}catch(_){}
+  for(const el of document.querySelectorAll("[data-uid]")){const p=ps[el.dataset.uid];if(p)el.textContent=p.isMe?"你":(p.name||"同事")}
+}
+function refreshLists(){
+  $("gearNames").innerHTML=[...S.gear.values()].map(g=>`<option value="${esc(g.name)}">`).join("");
+  $("venueNames").innerHTML=[...new Set([...S.events.values()].map(e=>e.venue).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join("");
+}
+function banner(){
+  if(TEST_TODAY)return`<div class="banner">測試模式：假裝今天是 ${md(TEST_TODAY)}（${wdOf(TEST_TODAY)}）。網址改成 <b>?today=</b> 就恢復真實日期。</div>`;
+  if(S.dbOk===false)return`<div class="banner">這個瀏覽器存不了資料（可能是無痕模式）。目前只能看，修改不會被儲存。</div>`;
+  if(!S.canWrite)return`<div class="banner">你目前只有檢視權限。需要編輯請請擁有者把你設成「參與者」以上。</div>`;
+  return"";
+}
+function lt(title,sub,withMe){return`<div class="lt"><div><h1>${title}</h1>${sub?`<p>${sub}</p>`:""}</div>${withMe&&S.meAvatar?`<img class="me" src="${esc(S.meAvatar)}" alt="">`:""}</div>`}
+
+/* ---------- 活動列表 ---------- */
+function pickProgress(e){const ids=itemsOf(e).map(([g])=>g),done=ids.filter(g=>(e.picked||{})[g]).length;return[done,ids.length]}
+function evRow([id,e]){
+  const p=stage(e),op=openPend(e).length,rp=[...S.repairs.values()].filter(r=>r.eventId===id&&r.status!=="done").length,[pd,pn]=pickProgress(e);
+  const d=parse(e.start);
+  const phaseBadge=p==="ready"?`<span class="badge ok">✓ 已抓好，${rel(e.start)}出發</span>`:p==="pick"?`<span class="badge pick">抓貨 ${pd}/${pn}</span>`:p==="show"?(overdue(e)?`<span class="badge bad">逾期未歸還</span>`:`<span class="badge show">演出中</span>`):`<span class="badge ok">已歸還</span>`;
+  return`<button type="button" class="row" data-ev="${esc(id)}">
+    <span class="stub"><b>${d.getDate()}</b><small>${d.getMonth()+1}月 週${WD[d.getDay()]}</small></span>
+    <span class="rn"><span class="evname">${esc(e.name||"未命名活動")}</span><span class="evsub">${e.venue?esc(e.venue)+" · ":""}${e.start===e.end?rel(e.start):rel(e.start)+" 到 "+md(e.end)}</span>
+    <span class="badges">${e.type?`<span class="badge mute">${esc(e.type)}</span>`:""}${phaseBadge}${op?`<span class="badge warn">待補 ${op}</span>`:""}${rp?`<span class="badge bad">報修 ${rp}</span>`:""}${!pn&&p!=="done"?`<span class="badge mute">還沒排器材</span>`:""}</span></span>${IC.chev}</button>`;
+}
+function viewEvents(){
+  const all=sortedEvents(),by={pick:[],show:[],done:[]};for(const x of all){const s=stage(x[1]);by[s==="ready"?"pick":s].push(x)}by.done.reverse();
+  let h=lt("活動",by.show.length?`今天 ${by.show.length} 場演出中`:"抓貨、演出、歸還都在這裡",true)+banner();
+  h+=`<div class="seg" role="group" aria-label="依階段篩選">${["pick","show","done"].map(k=>`<button type="button" data-evtab="${k}" aria-pressed="${evTab===k}">${PH[k][0]}${by[k].length&&k!=="done"?`<span class="cnt">${by[k].length}</span>`:""}</button>`).join("")}</div>`;
+  const l=by[evTab]||[];
+  if(!all.length)return h+`<div class="empty">還沒有活動。<br>按右下角 ＋，貼上 LINE 上的器材清單或截圖，就能建立第一場。<br>要匯入舊資料，到「庫存」分頁最下面按「從備份還原」。</div>`;
+  if(!l.length)return h+`<div class="empty">${{pick:"沒有要抓貨的活動。",show:"目前沒有演出中的活動。",done:"還沒有歸還完成的活動。"}[evTab]}</div>`;
+  return h+`<div class="list">${l.map(evRow).join("")}</div>`;
+}
+
+/* ---------- 活動詳細 ---------- */
+function openDetail(id){S.scroll[S.tab]=scrollY;S.detail={id,edit:false,draft:null,anim:true};S.sel.clear();render();window.scrollTo(0,0)}
+function goBack(){if(!S.detail)return;S.detail=null;S.sel.clear();render();window.scrollTo(0,S.scroll[S.tab]||0)}
+function viewDetail(){
+  const d=S.detail,id=d.id,e=S.events.get(id),st=stage(e),p=st==="ready"?"pick":phase(e);
+  const reps=[...S.repairs].filter(([,r])=>r.eventId===id&&r.status!=="done");
+  const anim=d.anim?" screen-in":"";d.anim=false;
+  const order=["pick","show","done"],ci=st==="ready"?1:order.indexOf(p);
+  let h=`<div class="hero${anim}">${e.venue?`<span class="tape">${esc(e.venue)}</span>`:""}${e.type?`<span class="typetag">${esc(e.type)}</span>`:""}<h1 class="hname">${esc(e.name||"未命名活動")}</h1><p class="hdate num">${span(e)} · ${dayCount(e.start,e.end)} 天</p>${e.note?`<p class="hnote">${esc(e.note)}</p>`:""}</div>`;
+  h+=`<ol class="steps" aria-label="階段">${order.map((k,i)=>`<li class="${i<ci?"past":i===ci&&st!=="ready"?"cur p-"+k:""}"><span class="dot">${i<ci?"✓":i+1}</span>${st==="ready"&&i===1?md(e.start)+" 開始":["抓貨","演出中","歸還"][i]}</li>`).join("")}</ol>`;
+  h+=banner();
+  if(overdue(e))h+=`<div class="alert">已經過了撤場日 ${md(e.end)}，器材還沒歸還，其他活動排不到這些數量。</div>`;
+  if(reps.length)h+=`<button type="button" class="alert" data-act="gorep">這場有 ${reps.length} 筆器材報修，點這裡查看</button>`;
+  const can=S.canWrite&&S.dbOk!==false;
+  if(p==="pick"){
+    if(can&&!d.edit)h+=`<div class="quick"><button type="button" data-act="import"><span class="ic">${IC.imp}</span>匯入清單</button><button type="button" data-act="edit"><span class="ic">${IC.edit}</span>編輯清單</button><button type="button" data-act="addpend"><span class="ic">${IC.clip}</span>加待補</button><button type="button" data-act="report"><span class="ic">${IC.wrench}</span>回報損壞</button></div>`;
+    if(can&&!d.edit)h+=tplCard(id,e);
+    h+=d.edit?editList(e):pickList(e);
+  }else if(p==="show"){
+    if(can&&!d.edit)h+=`<div class="quick"><button type="button" data-act="addpend"><span class="ic">${IC.clip}</span>加待補</button><button type="button" data-act="transfer"><span class="ic">${IC.swap}</span>轉借他場</button><button type="button" data-act="report"><span class="ic">${IC.wrench}</span>回報損壞</button><button type="button" data-act="edit"><span class="ic">${IC.edit}</span>改數量</button></div>`;
+    h+=d.edit?editList(e):showList(e);
+  }else h+=doneList(e);
+  if(p!=="done"&&!d.edit)h+=pendSection(id,e);
+  h+=logSection(e);
+  return h;
+}
+function pickList(e){
+  const ids=itemsOf(e).map(([g])=>g);
+  if(!ids.length)return`<div class="empty">還沒有器材。<br>按「匯入清單」貼上 LINE 訊息或截圖，或按「編輯清單」依分類從庫存挑。</div>`;
+  const[dn,n]=pickProgress(e),full=n&&dn===n;
+  let h=`<div class="progress"><div class="top"><b>${dn} / ${n}</b><span>${full?"全部抓齊了，可以出發":"邊抓邊打勾，大家看到的進度是同步的"}</span></div><div class="bar${full?" full":""}"><i style="width:${n?dn/n*100:0}%"></i></div></div>`;
+  for(const[cat,list]of groupByCat(ids)){
+    h+=`<section class="sec"><div class="sech"><h2>${esc(cat)}</h2></div><div class="list">${list.map(gid=>{const q=+e.items[gid],on=!!(e.picked||{})[gid],u=esc(gUnit(gid));
+      return`<div class="prow pickrow${on?" picked":""}"><label class="chk pickbox"><input type="checkbox" data-pick="${esc(gid)}" ${on?"checked":""} ${S.canWrite?"":"disabled"} aria-label="已抓 ${esc(gName(gid))}"><span class="box">${IC.check}</span></label><button type="button" class="row" data-item="${esc(gid)}"><span class="rn"><span>${esc(gName(gid))}</span>${needChip(gid)}</span><span class="rq">${q}<small>${u}</small></span>${IC.chev}</button></div>`}).join("")}</div></section>`;
+  }
+  return h;
+}
+function showList(e){
+  const ids=itemsOf(e).map(([g])=>g);
+  if(!ids.length)return`<div class="empty">這場目前沒有器材在外面。</div>`;
+  let h="";
+  for(const[cat,list]of groupByCat(ids))h+=`<section class="sec"><div class="sech"><h2>${esc(cat)}</h2></div><div class="list">${list.map(gid=>{const add=addedFor(e,gid);return`<button type="button" class="row" data-item="${esc(gid)}"><span class="rn"><span>${esc(gName(gid))}</span>${add?`<small>含補送／轉入 +${add}</small>`:""}${needChip(gid)}</span><span class="rq">${+e.items[gid]}<small>${esc(gUnit(gid))}</small></span>${IC.chev}</button>`}).join("")}</div></section>`;
+  return h;
+}
+function doneList(e){
+  const sum=e.returnSummary||{},ids=Object.keys(sum).length?Object.keys(sum):itemsOf(e).map(([g])=>g);
+  let h=`<div class="progress"><div class="top"><b style="color:var(--ok)">已歸還</b><span>${who(e.returnedBy)} · ${ago(e.returnedAt)}</span></div></div>`;
+  if(!ids.length)return h;
+  for(const[cat,list]of groupByCat(ids))h+=`<section class="sec"><div class="sech"><h2>${esc(cat)}</h2></div><div class="list">${list.map(gid=>{const s=sum[gid]||{ret:+(e.items||{})[gid]||0};const tags=[s.rep?`<span class="badge bad">送修 ${s.rep}</span>`:"",s.tr?`<span class="badge show">轉到 ${esc(S.events.get(s.to)?.name||"其他場")} ${s.tr}</span>`:""].join("");return`<div class="row"><span class="rn">${esc(gName(gid))}${tags?`<span class="badges">${tags}</span>`:""}</span><span class="rq">${s.ret||0}<small>${esc(gUnit(gid))} 歸還</small></span></div>`}).join("")}</div></section>`;
+  return h;
+}
+function editList(e){
+  const d=S.detail,[s,en]=rangeOf(e);
+  const ids=Object.keys(d.draft);
+  let h=`<section class="sec"><div class="sech"><h2>編輯器材數量</h2></div>`;
+  for(const[cat,list]of groupByCat(ids)){
+    h+=`<div class="sech"><h2 style="font-size:12.5px">${esc(cat)}</h2></div><div class="list">`+list.map(gid=>{
+      const q=+d.draft[gid]||0,av=availFor(gid,s,en,d.id),cap=av===Infinity?"":`<small class="cap${q>=av?" low":""}">${q>=av?"已到庫存上限 ":"最多 "}${av}${esc(gUnit(gid))}</small>`;
+      return`<div class="row${q?"":" zero"}"><span class="rn">${esc(gName(gid))}${cap}</span><span class="stepper"><button type="button" data-step="-1" data-gid="${esc(gid)}" aria-label="減少" ${q?"":"disabled"}>−</button><input id="q-${esc(gid)}" inputmode="numeric" data-qty="${esc(gid)}" value="${q}" aria-label="${esc(gName(gid))} 數量"><button type="button" data-step="1" data-gid="${esc(gid)}" aria-label="增加" ${q>=av?"disabled":""}>+</button></span></div>`;
+    }).join("")+`</div>`;
+  }
+  h+=`<div class="list"><div class="addrow"><input id="addName" list="gearNames" placeholder="輸入器材名稱" autocomplete="off" aria-label="新增器材名稱"><button type="button" class="btn primary" data-act="additem">加入</button></div></div><p class="hint">數量改成 0 就會移除。同一段日期其他活動已經排走的數量會先扣掉，所以「+」會停在庫存上限。</p></section>`;
+  return h+pickerSec(e);
+}
+/* 活動範本：依活動性質帶入常用器材，帶入前可以先增減 */
+function tplOf(e){return e?.type?S.templates.get(e.type):null}
+function applyTpl(id){const e=S.events.get(id),t=tplOf(e);if(!t)return;openImport({mode:"add",eid:id,title:`套用「${e.type}」範本`,rows:t.items})}
+async function saveTpl(id){
+  const e=S.events.get(id);if(!e?.type)return;
+  const items=itemsOf(e).map(([g,q])=>({name:gName(g),qty:+q,unit:gUnit(g),category:S.gear.get(g)?.category||"",note:""}));
+  if(!items.length){toast("這場還沒有器材");return}
+  const old=S.templates.get(e.type);
+  if(old&&!confirm(`要用這場的 ${items.length} 項取代原本的「${e.type}」範本（${old.items.length} 項）嗎？`))return;
+  if(await W(()=>db.collection("templates").doc(e.type).set({type:e.type,items,from:e.name,...stamp()})))toast(`已存成「${e.type}」範本`);
+}
+function tplCard(id,e){
+  if(!e.type)return"";const t=tplOf(e),empty=!itemsOf(e).length;
+  if(t)return empty?`<button type="button" class="tplcard" data-act="tpl"><span class="rn"><b>套用「${esc(e.type)}」範本</b><small>${t.items.length} 項常用器材，帶入前可以先增減</small></span>${IC.chev}</button>`:"";
+  return empty?`<p class="hint" style="padding:0 4px">還沒有「${esc(e.type)}」範本。這場排好器材後，按右上角 ⋯ →「存成範本」，下次同性質的活動就能直接帶入。</p>`:"";
+}
+function tplSec(){
+  const list=evTypes().filter(t=>S.templates.has(t));
+  if(!list.length)return"";
+  return`<section class="sec"><div class="sech"><h2>活動範本</h2></div><div class="list">${list.map(t=>{const x=S.templates.get(t);return`<button type="button" class="row" data-tplv="${esc(t)}"><span class="rn">${esc(t)}<small>${x.items.length} 項${x.from?` · 從「${esc(x.from)}」存的`:""}</small></span>${IC.chev}</button>`}).join("")}</div><p class="hint" style="padding:0 4px">活動選了性質，清單空的時候就會出現「套用範本」。</p></section>`;
+}
+function viewTpl(t){
+  const x=S.templates.get(t);if(!x)return;
+  const by={};for(const it of x.items){const c=it.category||guessCat(it.name);(by[c]=by[c]||[]).push(it)}
+  mountSheet(`「${t}」範本`,`${Object.keys(by).sort(catSort).map(c=>`<div class="sech" style="padding:0"><h2>${esc(c)}</h2></div><div class="list">${by[c].map(it=>`<div class="row"><span class="rn">${esc(it.name)}${it.note?`<small>${esc(it.note)}</small>`:""}</span><span class="rq">${+it.qty}<small>${esc(it.unit||"")}</small></span></div>`).join("")}</div>`).join("")}
+    <p class="hint">要修改：建一場這個性質的活動，套用後增減，再按 ⋯ →「存成範本」。</p>
+    <button type="button" class="danger" id="tDel">刪除這個範本</button>`,{noSave:true});
+  const d=$("tDel");d.onclick=async()=>{if(!arm(d,"再按一次確定刪除"))return;try{await db.collection("templates").doc(t).delete();closeSheet();toast("已刪除範本")}catch(err){toast(errMsg(err))}};
+}
+/* 從庫存挑：依分類點一下就加 1 */
+function pickerSec(e){
+  const d=S.detail,[s,en]=rangeOf(e),all=[...S.gear].filter(([,g])=>!isNeed(g));
+  if(!all.length)return"";
+  const cats=[...new Set(all.map(([,g])=>g.category||"其他"))].sort(catSort);
+  if(!cats.includes(d.pcat))d.pcat=cats[0];
+  const list=all.filter(([,g])=>(g.category||"其他")===d.pcat).sort((a,b)=>a[1].name.localeCompare(b[1].name,"zh-Hant"));
+  let h=`<section class="sec"><div class="sech"><h2>從庫存挑</h2></div><div class="list"><div class="chips">${cats.map(c=>`<button type="button" class="chip" data-pcat="${esc(c)}" aria-pressed="${c===d.pcat}">${esc(c)}<small>${all.filter(([,g])=>(g.category||"其他")===c).length}</small></button>`).join("")}</div>`;
+  h+=list.map(([gid,g])=>{const q=+d.draft[gid]||0,av=availFor(gid,s,en,d.id),full=q>=av,info=[q?`已加 ${q}`:"",av===Infinity?"沒填庫存":full?"已到上限":`可用 ${av-q}`].filter(Boolean).join(" · ");
+    return`<button type="button" class="row prow-add" data-padd="${esc(gid)}" ${full?"disabled":""}><span class="rn"><span>${esc(g.name)}</span><small>${info}</small></span><span class="plus">＋</span></button>`}).join("");
+  return h+`</div><p class="hint">點一下加 1，要改數量到上面調。分類可以在「庫存」分頁點器材修改。</p></section>`;
+}
+function pendRow(eid,pid,p){
+  const key=eid+"|"+pid,on=S.sel.has(key),u=esc(gUnit(p.gid));
+  const box=S.canWrite?`<input type="checkbox" data-sel="${esc(key)}" ${on?"checked":""}><span class="box">${IC.check}</span>`:"";
+  return`<div class="prow${on?" sel":""}"><label class="row${S.canWrite?" chk":""}">${box}<span class="rn"><b>${esc(gName(p.gid,p.name))}</b> <span class="num" style="font-size:18px">×${+p.qty||0}</span>${u?` ${u}`:""}<small>${p.note?esc(p.note)+" · ":""}${who(p.by)}提出 · ${ago(p.at)}</small></span></label>${S.canWrite?`<button type="button" class="mini" data-cancel="${esc(key)}">取消</button>`:""}</div>`;
+}
+function pendSection(eid,e){
+  const op=openPend(e),dn=donePend(e);
+  let h=`<section class="sec"><div class="sech"><h2>待補</h2>${S.canWrite&&S.dbOk!==false?`<button type="button" class="link" data-act="addpend">＋ 新增</button>`:""}</div>`;
+  h+=op.length?`<div class="list">${op.map(([pid,p])=>pendRow(eid,pid,p)).join("")}</div><p class="hint">補送的人把送到的打勾，按「確認送達」，數量就加進這場清單。</p>`:`<div class="empty" style="padding:14px">沒有待補項目</div>`;
+  if(dn.length)h+=`<div class="list">${dn.map(([pid,p])=>`<div class="prow done"><div class="row"><span class="rn">${esc(gName(p.gid,p.name))} <span class="num" style="font-size:17px">×${+p.qty||0}</span><small>${p.via?esc(p.via)+" · ":""}${who(p.doneBy)}送達 · ${ago(p.doneAt)}</small></span></div>${S.canWrite&&!p.via?`<button type="button" class="mini" data-undo="${esc(eid+"|"+pid)}">撤銷</button>`:""}</div>`).join("")}</div>`;
+  return h+`</section>`;
+}
+function logSection(e){
+  const l=Object.values(e.log||{}).filter(Boolean).sort((a,b)=>String(b.at||"").localeCompare(String(a.at||"")));
+  if(!l.length)return"";
+  return`<section class="sec"><div class="sech"><h2>異動紀錄</h2></div><div class="list loglist">${l.map(x=>`<div class="row"><span class="rn">${x.type==="out"?`轉出 ${esc(gName(x.gid))} ×${x.qty} 到「${esc(S.events.get(x.other)?.name||"其他場")}」`:x.type==="in"?`從「${esc(S.events.get(x.other)?.name||"其他場")}」轉入 ${esc(gName(x.gid))} ×${x.qty}`:esc(x.text||"")}<small>${who(x.by)} · ${ago(x.at)}</small></span></div>`).join("")}</div></section>`;
+}
+function detailMenu(){
+  const id=S.detail?.id,e=S.events.get(id);if(!e)return;const st=stage(e),p=st==="ready"?"pick":phase(e),list=[];
+  if(st==="ready")list.push({icon:IC.undo,label:"退回抓貨",sub:"取消「已抓好」，繼續勾選",fn:()=>setPhase(id,"pick")});
+  list.push({icon:IC.info,label:"活動資訊",sub:"名稱、場館、日期、備註",fn:()=>openEventForm(id)});
+  if(p!=="done")list.push({icon:IC.imp,label:"從截圖或文字匯入",fn:()=>openImport({mode:"add",eid:id})});
+  if(p!=="done"&&tplOf(e))list.push({icon:IC.clip,label:`套用「${e.type}」範本`,sub:`${tplOf(e).items.length} 項，帶入前可以先增減`,fn:()=>applyTpl(id)});
+  if(e.type&&itemsOf(e).length)list.push({icon:IC.box,label:`存成「${e.type}」範本`,sub:"下次同性質的活動可以直接帶入",fn:()=>saveTpl(id)});
+  if(p==="show")list.push({icon:IC.swap,label:"轉借到其他場",sub:"還沒歸還就先拿去別場用",fn:()=>openTransfer(id)});
+  list.push({icon:IC.wrench,label:"回報損壞",fn:()=>openRepairForm({eventId:id})});
+  if(p==="show")list.push({icon:IC.undo,label:"退回抓貨階段",fn:()=>setPhase(id,"pick")});
+  if(p==="done")list.push({icon:IC.undo,label:"重新開啟（回到演出中）",sub:"已建立的報修和轉借不會被復原",fn:()=>setPhase(id,"show")});
+  openActions(list);
+}
+async function setPhase(id,p){if(await W(()=>evRef(id).update({phase:p,...stamp()})))toast(p==="pick"?"已退回抓貨":p==="show"?"已重新開啟":"")}
+async function ship(btn){
+  const id=S.detail.id,e=S.events.get(id),[dn,n]=pickProgress(e);
+  if(!n){toast("清單還是空的，先加器材再出發。");return}
+  if(dn<n&&!arm(btn,`還有 ${n-dn} 項沒勾，再按一次直接出發`))return;
+  btn.disabled=true;
+  const early=todayStr()<e.start;
+  if(await W(()=>evRef(id).update({phase:"show",shippedAt:now(),shippedBy:S.me||null,...stamp()}))){buzz();toast(early?`已抓好，${md(e.start)} 會自動變成演出中`:"出發！已切換到演出中");window.scrollTo(0,0)}
+  btn.disabled=false;
+}
+async function saveDraft(btn){
+  const d=S.detail,e=S.events.get(d.id);if(!e||!db)return;
+  const items={},picked={};for(const k of new Set([...Object.keys(e.items||{}),...Object.keys(d.draft)])){const q=Math.max(0,Math.floor(+d.draft[k]||0));items[k]=q;if(q!==(+(e.items||{})[k]||0)&&(e.picked||{})[k])picked[k]=false}
+  btn.disabled=true;
+  if(await W(()=>evRef(d.id).update({items,picked,...stamp()}))){d.edit=false;d.draft=null;toast("已更新器材清單")}
+  render();
+}
+async function deliver(btn){
+  if(!db)return;btn.disabled=true;
+  const byEv=new Map();for(const k of S.sel){const[eid,pid]=k.split("|");if(!byEv.has(eid))byEv.set(eid,[]);byEv.get(eid).push(pid)}
+  let n=0,short=[];
+  for(const[eid,pids]of byEv){
+    const e=S.events.get(eid);if(!e)continue;const[s,en]=rangeOf(e);
+    const items={},pending={};
+    for(const pid of pids){
+      const p=e.pending?.[pid];if(!p||p.status!=="open")continue;
+      const cur=items[p.gid]??(+(e.items||{})[p.gid]||0),av=availFor(p.gid,s,en,eid);
+      if(cur+(+p.qty||0)>av){short.push(`${gName(p.gid,p.name)}（只剩 ${Math.max(0,av-cur)}）`);continue}
+      items[p.gid]=cur+(+p.qty||0);pending[pid]={status:"done",doneBy:S.me||null,doneAt:now()};n++;
+    }
+    if(Object.keys(pending).length)await W(()=>evRef(eid).update({items,pending,...stamp()}));
+  }
+  S.sel.clear();
+  toast(short.length?`庫存不夠，沒送出：${short.join("、")}`:`已確認送達 ${n} 項，數量加進清單了`);
+  render();
+}
+async function cancelPend(key){const[eid,pid]=key.split("|");if(await W(()=>evRef(eid).update({pending:{[pid]:{status:"cancelled",cancelledBy:S.me||null,cancelledAt:now()}}}))){S.sel.delete(key);toast("已取消這個待補項目")}render()}
+async function undoPend(key){
+  const[eid,pid]=key.split("|"),e=S.events.get(eid),p=e?.pending?.[pid];if(!p)return;
+  if(await W(()=>evRef(eid).update({items:{[p.gid]:Math.max(0,(+(e.items||{})[p.gid]||0)-(+p.qty||0))},pending:{[pid]:{status:"open",doneBy:null,doneAt:null}}})))toast("已撤銷，數量從清單扣回");
+}
+
+/* ---------- 待補 / 維修 / 庫存 tabs ---------- */
+function viewPending(){
+  const groups=sortedEvents().filter(([,e])=>phase(e)!=="done"&&openPend(e).length);
+  let h=lt("待補","要補送的器材都在這，送到後打勾確認")+banner();
+  if(!groups.length)return h+`<div class="empty">沒有待補項目，各場器材都到齊了。<br>現場缺東西時，進活動頁按「加待補」。</div>`;
+  for(const[eid,e]of groups)h+=`<section class="sec"><div class="ghead"><button type="button" data-ev="${esc(eid)}">${esc(e.name)}</button><span>${e.venue?esc(e.venue)+" · ":""}${rel(e.start)}</span></div><div class="list">${openPend(e).map(([pid,p])=>pendRow(eid,pid,p)).join("")}</div></section>`;
+  return h;
+}
+const ST={open:["待處理","bad"],fixing:["維修中","warn"],done:["已修好","ok"]};
+function repRow([id,r]){
+  const ev=r.eventId?S.events.get(r.eventId):null,img=isPhoto(r.photo)?`<img src="${esc(r.photo)}" alt="" loading="lazy">`:`<span class="noimg">${IC.wrench}</span>`,st=ST[r.status]||ST.open;
+  return`<button type="button" class="row rep" data-rep="${esc(id)}">${img}<span class="rn"><span class="rt">${esc(gName(r.gid,r.gearName))} <span class="num" style="font-size:17px">×${+r.qty||1}</span></span><span class="ri">${esc(r.issue||"沒有描述")}</span><span class="rm"><span class="badge ${st[1]}">${st[0]}</span><span>${who(r.by)} · ${ago(r.at)}</span>${ev?`<span>${esc(ev.name)}</span>`:""}</span></span></button>`;
+}
+function viewRepairs(){
+  const all=[...S.repairs].sort((a,b)=>String(b[1].at||"").localeCompare(String(a[1].at||""))),open=all.filter(([,r])=>r.status!=="done"),done=all.filter(([,r])=>r.status==="done");
+  let h=lt("維修","送修中的數量會先從庫存扣掉，修好就回來")+banner();
+  h+=`<div class="seg" role="group" aria-label="篩選"><button type="button" data-reptab="open" aria-pressed="${S.repTab==="open"}">未修好${open.length?`<span class="cnt">${open.length}</span>`:""}</button><button type="button" data-reptab="done" aria-pressed="${S.repTab==="done"}">已修好</button></div>`;
+  if(S.repTab==="open"){
+    if(!open.length)return h+`<div class="empty">沒有待修的器材。<br>發現東西壞了，按右下角 ＋ 拍照回報。</div>`;
+    for(const st of["open","fixing"]){const l=open.filter(([,r])=>(r.status||"open")===st);if(l.length)h+=`<section class="sec"><div class="sech"><h2>${ST[st][0]}</h2></div><div class="list">${l.map(repRow).join("")}</div></section>`}
+  }else h+=done.length?`<div class="list">${done.map(repRow).join("")}</div>`:`<div class="empty">還沒有修好的紀錄。</div>`;
+  return h;
+}
+const CABLE_G=[["SPK 喇叭線",/^spk|喇叭線|speakon/i],["XLR 多芯",/多芯|多蕊/],["Phone／TRS",/phone|trs|6\.3/i],["XLR",/xlr|卡儂/i],["Multi Cable",/multi|snake/i],["網路線",/網路|cat\s?\d|ethercon|rj45/i],["電源",/電源|powercon|p to|排插|延長/i]];
+function cableGroups(ids){const m=new Map();for(const id of ids){const n=S.gear.get(id).name,gr=(CABLE_G.find(([,r])=>r.test(n))||["其他線材"])[0];if(!m.has(gr))m.set(gr,[]);m.get(gr).push(id)}
+  const ord=[...CABLE_G.map(x=>x[0]),"其他線材"];return [...m].sort((a,b)=>ord.indexOf(a[0])-ord.indexOf(b[0])).map(([g,l])=>[g,l.sort((a,b)=>gName(a).localeCompare(gName(b),"zh-Hant",{numeric:true}))])}
+function viewGear(){
+  let h=lt("庫存","今天在倉庫可用的數量")+banner();
+  if(S.gear.size){const nc=[...S.gear.values()].filter(g=>!isNeed(g)&&(g.category||"其他")==="線材").length,nh=[...S.gear.values()].filter(g=>!isNeed(g)).length-nc;
+    h+=`<div class="seg" role="group" aria-label="設備或線材">${[["hw","設備",nh],["cable","線材",nc]].map(([k,l,n])=>`<button type="button" data-gtab="${k}" aria-pressed="${gTab===k}">${l}<span class="cnt">${n}</span></button>`).join("")}</div>`}
+  h+=`<label class="search">${IC.search}<input id="gq" type="search" placeholder="搜尋器材" value="${esc(S.gq)}" autocomplete="off" aria-label="搜尋器材"></label>`;
+  if(!S.gear.size)return h+`<div class="empty">還沒有器材。<br>匯入活動清單時會自動建立，也可以按 ＋ 手動新增。<br>有備份檔的話，用下面的「從備份還原」。</div>`+backupSec();
+  const q=norm(S.gq),ids=[...S.gear.keys()].filter(id=>!isNeed(S.gear.get(id))&&inGTab(S.gear.get(id))&&(!q||norm(S.gear.get(id).name).includes(q)||norm(S.gear.get(id).category).includes(q))),t=todayStr();
+  const missing=[...S.gear.values()].filter(g=>!isNeed(g)&&inGTab(g)&&!hasQty(g)).length;
+  const needs=[...S.gear].filter(([,g])=>isNeed(g)&&gTab==="hw"&&(!q||norm(g.name).includes(q))).sort((a,b)=>a[1].name.localeCompare(b[1].name,"zh-Hant"));
+  const needSec=needs.length?`<section class="sec"><div class="sech"><h2>客戶用語對應</h2></div><div class="list">${needs.map(([id,g])=>`<button type="button" class="row" data-need="${esc(id)}"><span class="rn">${esc(g.name)}<small>→ ${esc(mapNames(g.mapTo)||"還沒設定")}</small></span>${IC.chev}</button>`).join("")}</div><p class="hint" style="padding:0 4px">客戶清單寫這些名稱時，匯入會自動換成右邊的實際器材。</p></section>`:"";
+  if(missing)h+=`<p class="hint" style="padding:0 4px">有 ${missing} 項還沒填總數量，這些不會限制可借數量。點進去就能填。</p>`;
+  if(!ids.length&&!needs.length)return h+`<div class="empty">${q?`找不到「${esc(S.gq)}」。`:gTab==="cable"?"還沒有線材。按 ＋ 新增，分類選「線材」。":"還沒有設備。"}</div>`+tplSec()+backupSec();
+  h+=needSec;
+  for(const[cat,list]of gTab==="cable"?cableGroups(ids):groupByCat(ids)){
+    h+=`<section class="sec"><div class="sech"><h2>${esc(cat)}</h2></div><div class="list">${list.map(id=>{
+      const g=S.gear.get(id),u=esc(g.unit||"");
+      if(!hasQty(g))return`<button type="button" class="row" data-gear="${esc(id)}"><span class="rn">${esc(g.name)}<small>還沒填總數量</small></span><span class="stock"><b style="color:var(--muted)">—</b></span>${IC.chev}</button>`;
+      const out=outToday(id),rep=inRepair(id),av=availFor(id,t,t,null);
+      const sub=[out?`外出 ${out}`:"",rep?`維修 ${rep}`:"",g.note||""].filter(Boolean).join(" · ")||"全部在倉庫";
+      return`<button type="button" class="row" data-gear="${esc(id)}"><span class="rn">${esc(g.name)}<small>${esc(sub)}</small></span><span class="stock"><b class="${av===0?"low":""}">${av}</b><small>可用 / 共 ${g.qty}${u}</small></span>${IC.chev}</button>`;
+    }).join("")}</div></section>`;
+  }
+  return h+tplSec()+backupSec();
+}
+
+/* ---------- view events ---------- */
+$("view").addEventListener("click",async e=>{
+  const t=e.target;
+  const ev=t.closest("[data-ev]");if(ev){openDetail(ev.dataset.ev);return}
+  const gt=t.closest("[data-gtab]");if(gt){gTab=gt.dataset.gtab;try{localStorage.setItem("gTab",gTab)}catch(_){}render();return}
+  const et=t.closest("[data-evtab]");if(et){evTab=et.dataset.evtab;try{localStorage.setItem("evTab",evTab)}catch(_){}render();return}
+  const rt=t.closest("[data-reptab]");if(rt){S.repTab=rt.dataset.reptab;render();return}
+  const st=t.closest("[data-step]");if(st){const g=st.dataset.gid,d=S.detail.draft,e2=S.events.get(S.detail.id),[s,en]=rangeOf(e2),av=availFor(g,s,en,S.detail.id);d[g]=Math.min(av,Math.max(0,(+d[g]||0)+(+st.dataset.step)));render();return}
+  const pc=t.closest("[data-pcat]");if(pc){S.detail.pcat=pc.dataset.pcat;render();return}
+  const pa=t.closest("[data-padd]");if(pa){const g=pa.dataset.padd,d=S.detail.draft,e2=S.events.get(S.detail.id),[s,en]=rangeOf(e2),av=availFor(g,s,en,S.detail.id),cur=+d[g]||0;if(cur+1>av){toast(`${gName(g)} 這段期間已經沒有庫存了`);return}buzz();d[g]=cur+1;render();return}
+  const ca=t.closest("[data-cancel]");if(ca){if(arm(ca,"確定取消？"))cancelPend(ca.dataset.cancel);return}
+  const un=t.closest("[data-undo]");if(un){if(arm(un,"確定撤銷？"))undoPend(un.dataset.undo);return}
+  const rp=t.closest("[data-rep]");if(rp){openRepair(rp.dataset.rep);return}
+  const tv=t.closest("[data-tplv]");if(tv){viewTpl(tv.dataset.tplv);return}
+  const gr=t.closest("[data-gear]");if(gr){openGearForm(gr.dataset.gear);return}
+  const it=t.closest("[data-item]");if(it){if(S.canWrite&&S.dbOk!==false)openMap({eid:S.detail.id,gid:it.dataset.item});return}
+  const nd=t.closest("[data-need]");if(nd){openMap({gid:nd.dataset.need});return}
+  const ac=t.closest("[data-act]");if(!ac)return;
+  const id=S.detail?.id,act=ac.dataset.act;
+  if(act==="import")openImport({mode:"add",eid:id});
+  if(act==="tpl")applyTpl(id);
+  if(act==="addpend")openPendForm(id);
+  if(act==="report")openRepairForm({eventId:id});
+  if(act==="transfer")openTransfer(id);
+  if(act==="gorep"){S.detail=null;S.tab="repairs";S.repTab="open";render();window.scrollTo(0,0)}
+  if(act==="edit"){S.detail.draft=Object.fromEntries(itemsOf(S.events.get(id)));S.detail.edit=true;render()}
+  if(act==="additem"){
+    const inp=$("addName"),name=inp.value.trim();if(!name){inp.focus();return}
+    ac.disabled=true;
+    try{const gid=await ensureGear(name),e2=S.events.get(id),[s,en]=rangeOf(e2),av=availFor(gid,s,en,id),cur=+S.detail.draft[gid]||0;
+      if(cur+1>av){toast(`${gName(gid)} 這段期間已經沒有庫存了`);ac.disabled=false;return}
+      S.detail.draft[gid]=cur+1;render();const n=$("addName");if(n){n.value="";n.focus()}}
+    catch(err){toast(errMsg(err));ac.disabled=false}
+  }
+});
+$("view").addEventListener("change",async e=>{
+  const pk=e.target.closest("input[data-pick]");if(pk){buzz();const id=S.detail.id;await W(()=>evRef(id).update({picked:{[pk.dataset.pick]:pk.checked}}));return}
+  const c=e.target.closest("input[data-sel]");if(c){c.checked?S.sel.add(c.dataset.sel):S.sel.delete(c.dataset.sel);c.closest(".prow").classList.toggle("sel",c.checked);updateBar();updateFab();return}
+  const q=e.target.closest("input[data-qty]");if(q){const g=q.dataset.qty,e2=S.events.get(S.detail.id),[s,en]=rangeOf(e2),av=availFor(g,s,en,S.detail.id),v=Math.max(0,Math.floor(+q.value||0));if(v>av)toast(`${gName(g)} 最多只能排 ${av}`);S.detail.draft[g]=Math.min(av,v);render()}
+});
+$("view").addEventListener("input",e=>{if(e.target.id==="gq"){S.gq=e.target.value;render()}});
+$("view").addEventListener("keydown",e=>{if(e.target.id==="addName"&&e.key==="Enter"){e.preventDefault();document.querySelector('[data-act="additem"]')?.click()}});
+
+/* ---------- sheets ---------- */
+function closeSheet(){$("sheetRoot").innerHTML="";if(imp.ctl)imp.ctl.abort();rs=null;mp=null}
+function mountSheet(title,body,{save="儲存",onSave,noSave}={}){
+  $("sheetRoot").innerHTML=`<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="grab"></div><div class="sheet-head pad"><button type="button" id="sCancel">${noSave?"關閉":"取消"}</button><h2>${esc(title)}</h2>${noSave?"<span></span>":`<button type="button" class="save" id="sSave" ${S.canWrite&&S.dbOk!==false?"":"disabled"}>${esc(save)}</button>`}</div><div class="sheet-body pad" id="sBody">${body}</div></div></div>`;
+  $("sCancel").onclick=closeSheet;
+  $("scrim").addEventListener("click",e=>{if(e.target.id==="scrim")closeSheet()});
+  if(!noSave)$("sSave").onclick=async()=>{const b=$("sSave");b.disabled=true;try{await onSave()}finally{if(b.isConnected)b.disabled=!(S.canWrite&&S.dbOk!==false)}};
+}
+function setErr(m){const el=$("sErr");if(el){el.textContent=m||"";el.hidden=!m}}
+function openActions(list){
+  $("sheetRoot").innerHTML=`<div class="scrim" id="scrim"><div class="sheet" role="dialog" aria-modal="true" aria-label="選擇動作"><div class="grab"></div><div class="actions pad"><div class="list">${list.map((a,i)=>`<button type="button" data-a="${i}" class="${a.danger?"dangerous":""}">${a.icon||""}<span>${esc(a.label)}${a.sub?`<small>${esc(a.sub)}</small>`:""}</span></button>`).join("")}</div><button type="button" class="cancel" id="aCancel">取消</button></div></div></div>`;
+  $("aCancel").onclick=closeSheet;$("scrim").addEventListener("click",e=>{if(e.target.id==="scrim"){closeSheet();return}const b=e.target.closest("[data-a]");if(b){closeSheet();list[+b.dataset.a].fn()}});
+}
+function stepperHtml(id,val,max){return`<span class="stepper"><button type="button" data-sstep="-1" data-for="${id}" aria-label="減少">−</button><input id="${id}" inputmode="numeric" value="${val}" ${max!=null?`data-max="${max}"`:""} aria-label="數量"><button type="button" data-sstep="1" data-for="${id}" aria-label="增加">+</button></span>`}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-sstep]");if(!b)return;const inp=$(b.dataset.for),mx=inp.dataset.max!=null?+inp.dataset.max:Infinity,mn=inp.dataset.min!=null?+inp.dataset.min:1;inp.value=Math.min(mx,Math.max(mn,(Math.floor(+inp.value)||0)+(+b.dataset.sstep)));inp.dispatchEvent(new Event("input",{bubbles:true}))});
+function eventOptions(sel,{none,exclude,label="不指定"}={}){const list=sortedEvents().filter(([id,e])=>id!==exclude&&(phase(e)!=="done"||id===sel));return (none?`<option value="">${label}</option>`:"")+list.map(([id,e])=>`<option value="${esc(id)}" ${id===sel?"selected":""}>${esc(e.name)}（${md(e.start)}）</option>`).join("")}
+
+/* event form */
+function openEventForm(id){
+  const e=id?S.events.get(id):null;
+  mountSheet(id?"活動資訊":"新增活動",`
+    <div class="field"><label for="fName">活動名稱</label><input id="fName" value="${esc(e?.name||"")}" placeholder="例如：週年晚會" autocomplete="off"></div>
+    <div class="field"><label for="fVenue">場館</label><input id="fVenue" list="venueNames" value="${esc(e?.venue||"")}" placeholder="例如：市立體育館" autocomplete="off"></div>
+    <div class="field"><label>活動性質</label><div class="chips wrap" id="fType">${evTypes().map(t=>`<button type="button" class="chip" data-etype="${esc(t)}" aria-pressed="${e?.type===t}">${esc(t)}</button>`).join("")}</div><input id="fTypeNew" placeholder="或輸入新的性質" autocomplete="off" aria-label="新的活動性質" style="margin-top:8px"></div>
+    <div class="row2"><div class="field"><label for="fStart">進場（裝台）</label><input type="date" id="fStart" value="${e?.start||todayStr()}"></div><div class="field"><label for="fEnd">撤場</label><input type="date" id="fEnd" value="${e?.end||todayStr()}"></div></div>
+    <div class="field"><label for="fNote">備註</label><textarea id="fNote" rows="3" placeholder="例如：12:00 倉庫出發">${esc(e?.note||"")}</textarea></div>
+    <p class="err" id="sErr" hidden></p>
+    ${id?`<button type="button" class="danger" id="fDel">刪除這場活動</button>`:""}`,{save:id?"儲存":"建立",onSave:async()=>{
+      const b={name:$("fName").value.trim(),venue:$("fVenue").value.trim(),type:$("fTypeNew").value.trim()||document.querySelector('#fType [aria-pressed="true"]')?.dataset.etype||"",start:$("fStart").value,end:$("fEnd").value,note:$("fNote").value.trim(),...stamp()};
+      if(!b.name)return setErr("請填活動名稱。");
+      if(!validDate(b.start)||!validDate(b.end))return setErr("請選進場和撤場日期。");
+      if(b.end<b.start)return setErr("撤場日期要在進場日期之後。");
+      try{
+        if(id){await evRef(id).update(b);closeSheet();toast("已更新活動資訊")}
+        else{const ref=db.collection("events").doc();await ref.set({...b,phase:"pick",items:{},picked:{},pending:{},log:{},createdBy:S.me||null});closeSheet();toast("已建立活動");evTab="pick";openDetail(ref.id)}
+      }catch(err){setErr(errMsg(err))}
+    }});
+  $("fType").onclick=ev=>{const c=ev.target.closest("[data-etype]");if(!c)return;const on=c.getAttribute("aria-pressed")!=="true";$("fType").querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed","false"));c.setAttribute("aria-pressed",String(on))};
+  const del=$("fDel");if(del)del.onclick=async()=>{if(!arm(del,"再按一次確定刪除"))return;try{await evRef(id).delete();closeSheet();S.detail=null;toast("已刪除活動");render()}catch(err){setErr(errMsg(err))}};
+}
+
+/* pending form */
+function openPendForm(eid){
+  mountSheet("新增待補",`
+    ${eid?"":`<div class="field"><label for="pEv">哪一場活動</label><select id="pEv">${eventOptions(null,{})}</select></div>`}
+    <div class="field"><label for="pName">缺什麼器材</label><input id="pName" list="gearNames" placeholder="例如：無線麥克風" autocomplete="off"><p class="hint" id="pCap"></p></div>
+    <div class="field"><label for="pQty">數量</label>${stepperHtml("pQty",1)}</div>
+    <div class="field"><label for="pNote">備註（選填）</label><input id="pNote" placeholder="例如：下午 3 點前要到" autocomplete="off"></div>
+    <p class="err" id="sErr" hidden></p>`,{save:"新增",onSave:async()=>{
+      const ev=eid||$("pEv")?.value,name=$("pName").value.trim(),qty=Math.max(1,Math.floor(+$("pQty").value)||0);
+      if(!ev)return setErr("請先建立活動。");if(!name)return setErr("請填缺的器材。");
+      const e=S.events.get(ev),gid0=matchGear(name);
+      if(gid0){const[s,en]=rangeOf(e),av=availFor(gid0,s,en,ev)-(+(e.items||{})[gid0]||0);if(qty>av)return setErr(av>0?`倉庫這段期間只剩 ${av}${gUnit(gid0)}。`:"倉庫這段期間已經沒有了，可以從演出中的其他場「轉借」。")}
+      try{const gid=await ensureGear(name);const pid=rid();await evRef(ev).update({pending:{[pid]:{gid,name,qty,note:$("pNote").value.trim(),status:"open",by:S.me||null,at:now()}}});closeSheet();toast("已加入待補")}catch(err){setErr(errMsg(err))}
+    }});
+  const upd=()=>{const ev=eid||$("pEv")?.value,e=S.events.get(ev),g=matchGear($("pName").value),cap=$("pCap"),inp=$("pQty");if(!e||!g||!hasQty(S.gear.get(g))){cap.textContent="";delete inp.dataset.max;return}const[s,en]=rangeOf(e),av=Math.max(0,availFor(g,s,en,ev)-(+(e.items||{})[g]||0));cap.textContent=av?`倉庫這段期間還有 ${av}${gUnit(g)}`:"倉庫這段期間已經沒有了";inp.dataset.max=Math.max(1,av)};
+  $("pName").addEventListener("input",upd);$("pEv")?.addEventListener("change",upd);
+  setTimeout(()=>$("pName")?.focus(),250);
+}
+
+/* transfer (演出中借去別場) */
+function openTransfer(fromId){
+  const e=S.events.get(fromId),ids=itemsOf(e).map(([g])=>g);
+  if(!ids.length){toast("這場沒有器材可以轉借。");return}
+  const targets=sortedEvents().filter(([id,x])=>id!==fromId&&phase(x)!=="done");
+  if(!targets.length){toast("沒有其他進行中的活動可以轉過去。");return}
+  mountSheet("轉借到其他場",`
+    <p class="hint">器材還沒回倉庫就先拿去別場，數量會從這場扣掉、加到那一場。那場如果有同樣器材的待補，會自動標成已送達。</p>
+    <div class="field"><label for="tGear">哪個器材</label><select id="tGear">${ids.map(g=>`<option value="${esc(g)}">${esc(gName(g))}（這場有 ${e.items[g]}）</option>`).join("")}</select></div>
+    <div class="field"><label for="tQty">數量</label>${stepperHtml("tQty",1,+e.items[ids[0]])}</div>
+    <div class="field"><label for="tTo">轉到哪一場</label><select id="tTo">${targets.map(([id,x])=>`<option value="${esc(id)}">${esc(x.name)}（${md(x.start)}，${PH[phase(x)][0]}）</option>`).join("")}</select><p class="hint" id="tHint"></p></div>
+    <p class="err" id="sErr" hidden></p>`,{save:"轉借",onSave:async()=>{
+      const gid=$("tGear").value,to=$("tTo").value,qty=Math.max(1,Math.floor(+$("tQty").value)||1),src=S.events.get(fromId),dst=S.events.get(to);
+      const have=+(src.items||{})[gid]||0;if(qty>have)return setErr(`這場只有 ${have}。`);
+      const at=now(),lid=rid();
+      let left=qty;const pend={};
+      for(const[pid,p]of openPend(dst))if(p.gid===gid&&left>=(+p.qty||0)){left-=+p.qty||0;pend[pid]={status:"done",doneBy:S.me||null,doneAt:at,via:`從「${src.name}」轉來`}}
+      try{
+        await evRef(fromId).update({items:{[gid]:have-qty},log:{[lid]:{type:"out",gid,qty,other:to,by:S.me||null,at}},...stamp()});
+        await evRef(to).update({items:{[gid]:(+(dst.items||{})[gid]||0)+qty},pending:pend,log:{[lid]:{type:"in",gid,qty,other:fromId,by:S.me||null,at}},...stamp()});
+        closeSheet();toast(`已把 ${gName(gid)} ×${qty} 轉到「${dst.name}」`);
+      }catch(err){setErr(errMsg(err))}
+    }});
+  const upd=()=>{const g=$("tGear").value,to=$("tTo").value,dst=S.events.get(to);$("tQty").dataset.max=+e.items[g];if(+$("tQty").value>+e.items[g])$("tQty").value=e.items[g];const need=openPend(dst||{}).filter(([,p])=>p.gid===g).reduce((a,[,p])=>a+(+p.qty||0),0);$("tHint").textContent=need?`「${dst.name}」正好缺 ${need}，轉過去會一起標成已送達。`:""};
+  $("tGear").onchange=upd;$("tTo").onchange=upd;upd();
+}
+
+/* return (歸還) */
+let rs=null;
+function openReturn(id){
+  const e=S.events.get(id);
+  rs={id,rows:itemsOf(e).map(([gid,q])=>({gid,q:+q,rep:0,tr:0,to:"",open:false})),note:""};
+  mountSheet("歸還器材","",{save:"確認歸還",onSave:confirmReturn});
+  renderReturn();
+}
+function renderReturn(){
+  const b=$("sBody");if(!b||!rs)return;
+  const targets=eventOptions("",{none:true,exclude:rs.id,label:"選一場"});
+  const anyRep=rs.rows.some(r=>r.rep>0),allFull=rs.rows.every(r=>!r.rep&&!r.tr);
+  b.innerHTML=`<p class="hint">${allFull?"全部照數量回倉庫。有東西壞了或被拿去別場，點那一項的「有狀況」。":"有標記狀況的項目會照下面的數字處理，其餘回倉庫。"}</p>
+  ${rs.rows.length?`<div class="list">${rs.rows.map((r,i)=>{const ret=r.q-r.rep-r.tr;return`<div class="rrow"><div class="top"><span class="rn"><b>${esc(gName(r.gid))}</b><small>帶出 ${r.q}${esc(gUnit(r.gid))}${r.rep?` · 送修 ${r.rep}`:""}${r.tr?` · 轉場 ${r.tr}`:""}</small></span><span class="ret${ret<r.q?" part":""}">${ret}<small style="font-family:var(--f-body);font-size:11px;font-weight:400;color:var(--muted)"> 歸還</small></span><button type="button" class="mini" data-rx="${i}">${r.open?"收起":"有狀況"}</button></div>
+    ${r.open?`<div class="rext"><div class="rl"><span>送修</span>${rstep(i,"rep",r.rep,r.q-r.tr)}</div><div class="rl"><span>轉到</span><select data-rto="${i}" aria-label="轉到哪一場">${targets.replace(`value="${esc(r.to)}"`,`value="${esc(r.to)}" selected`)}</select>${rstep(i,"tr",r.tr,r.q-r.rep)}</div></div>`:""}</div>`}).join("")}</div>`:`<div class="empty">這場沒有器材要歸還。</div>`}
+  ${anyRep?`<div class="field"><label for="rsNote">送修說明</label><textarea id="rsNote" rows="2" placeholder="例如：一顆喇叭破音">${esc(rs.note)}</textarea></div>`:""}
+  <p class="err" id="sErr" hidden></p>`;
+  const n=$("rsNote");if(n)n.oninput=()=>rs.note=n.value;
+}
+function rstep(i,k,v,max){return`<span class="stepper"><button type="button" data-rs="${k}" data-i="${i}" data-d="-1" aria-label="減少" ${v?"":"disabled"}>−</button><input value="${v}" readonly aria-label="數量" tabindex="-1"><button type="button" data-rs="${k}" data-i="${i}" data-d="1" aria-label="增加" ${v>=max?"disabled":""}>+</button></span>`}
+document.addEventListener("click",e=>{
+  if(!rs||!$("sBody"))return;
+  const x=e.target.closest("[data-rx]");if(x){const r=rs.rows[+x.dataset.rx];r.open=!r.open;renderReturn();return}
+  const s=e.target.closest("[data-rs]");if(s){const r=rs.rows[+s.dataset.i],k=s.dataset.rs;r[k]=Math.max(0,Math.min(r.q-(k==="rep"?r.tr:r.rep),r[k]+(+s.dataset.d)));renderReturn()}
+});
+document.addEventListener("change",e=>{const s=e.target.closest("[data-rto]");if(s&&rs){rs.rows[+s.dataset.rto].to=s.value}});
+async function confirmReturn(){
+  const id=rs.id,src=S.events.get(id);
+  for(const r of rs.rows)if(r.tr&&!r.to)return setErr(`「${gName(r.gid)}」要轉到哪一場？請選一場。`);
+  const at=now(),summary={};
+  try{
+    const byTo=new Map();
+    for(const r of rs.rows){summary[r.gid]={ret:r.q-r.rep-r.tr,rep:r.rep,tr:r.tr,to:r.tr?r.to:null};if(r.tr){if(!byTo.has(r.to))byTo.set(r.to,[]);byTo.get(r.to).push(r)}}
+    for(const[to,rows]of byTo){
+      const dst=S.events.get(to);if(!dst)continue;const items={},log={},pend={};
+      for(const r of rows){items[r.gid]=(items[r.gid]??(+(dst.items||{})[r.gid]||0))+r.tr;log[rid()]={type:"in",gid:r.gid,qty:r.tr,other:id,by:S.me||null,at};
+        let left=r.tr;for(const[pid,p]of openPend(dst))if(p.gid===r.gid&&left>=(+p.qty||0)){left-=+p.qty||0;pend[pid]={status:"done",doneBy:S.me||null,doneAt:at,via:`從「${src.name}」轉來`}}}
+      await evRef(to).update({items,log,pending:pend,...stamp()});
+    }
+    for(const r of rs.rows)if(r.rep)await db.collection("repairs").add({gid:r.gid,gearName:gName(r.gid),qty:r.rep,eventId:id,issue:rs.note.trim()||"歸還時回報需要維修",photo:null,status:"open",fixNote:"",by:S.me||null,at,...stamp()});
+    const log={};for(const r of rs.rows)if(r.tr)log[rid()]={type:"out",gid:r.gid,qty:r.tr,other:r.to,by:S.me||null,at};
+    await evRef(id).update({phase:"done",returnedAt:at,returnedBy:S.me||null,returnSummary:summary,log,...stamp()});
+    rs=null;closeSheet();buzz();toast("已歸還，庫存數量已回到倉庫");window.scrollTo(0,0);
+  }catch(err){setErr(errMsg(err))}
+}
+
+/* repair form */
+let repFile=null;
+function openRepairForm({eventId}){
+  repFile=null;
+  mountSheet("回報損壞",`
+    <div class="field"><label for="rName">哪個器材</label><input id="rName" list="gearNames" placeholder="例如：燈具" autocomplete="off"></div>
+    <div class="row2"><div class="field"><label for="rQty">數量</label>${stepperHtml("rQty",1)}</div><div class="field"><label for="rEv">在哪場發現</label><select id="rEv">${eventOptions(eventId||"",{none:true})}</select></div></div>
+    <div class="field"><label for="rIssue">哪裡壞了</label><textarea id="rIssue" rows="3" placeholder="例如：開機沒反應，電源線換過還是一樣"></textarea></div>
+    <label class="filebtn">${IC.img}<span id="rFileLbl">拍照或選照片（選填）</span><input type="file" id="rFile" accept="image/*"></label><img class="thumb" id="rThumb" alt="" hidden>
+    <p class="hint">送修中的數量會先從庫存扣掉，標成「已修好」就回到可用數量。</p>
+    <p class="err" id="sErr" hidden></p>`,{save:"送出",onSave:async()=>{
+      const name=$("rName").value.trim(),issue=$("rIssue").value.trim();
+      if(!name)return setErr("請填哪個器材壞了。");if(!issue)return setErr("請簡單描述哪裡壞了。");
+      let photo=null;
+      try{if(repFile){$("sSave").textContent="處理中…";photo=await blobToDataUrl(await shrink(repFile))}}
+      catch(err){$("sSave").textContent="送出";return setErr("照片處理失敗，可以先不附照片送出。")}
+      try{await db.collection("repairs").add({gid:matchGear(name),gearName:name,qty:Math.max(1,Math.floor(+$("rQty").value)||1),eventId:$("rEv").value||null,issue,photo,status:"open",fixNote:"",by:S.me||null,at:now(),...stamp()});closeSheet();toast("已送出維修回報")}
+      catch(err){$("sSave").textContent="送出";setErr(errMsg(err))}
+    }});
+  const f=$("rFile");if(f)f.onchange=()=>{repFile=f.files[0]||null;const th=$("rThumb");if(repFile){th.src=URL.createObjectURL(repFile);th.hidden=false;$("rFileLbl").textContent="換一張照片"}else th.hidden=true};
+}
+async function shrink(file){try{const bmp=await createImageBitmap(file);const s=Math.min(1,1600/Math.max(bmp.width,bmp.height));const c=document.createElement("canvas");c.width=Math.round(bmp.width*s);c.height=Math.round(bmp.height*s);c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);return await new Promise(r=>c.toBlob(b=>r(b||file),"image/jpeg",.78))}catch(_){return file}}
+function blobToDataUrl(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)})}
+function openRepair(id){
+  const r=S.repairs.get(id);if(!r)return;
+  let st=r.status||"open";const ev=r.eventId?S.events.get(r.eventId):null;
+  mountSheet("維修紀錄",`
+    ${isPhoto(r.photo)?`<img class="bigimg" src="${esc(r.photo)}" alt="損壞照片">`:""}
+    <div><div style="font-size:20px;font-weight:700">${esc(gName(r.gid,r.gearName))} <span class="num">×${+r.qty||1}</span></div><p style="margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(r.issue||"")}</p></div>
+    <div class="kv"><div><b>回報</b><span>${who(r.by)} · ${ago(r.at)}</span></div>${ev?`<div><b>活動</b><span>${esc(ev.name)}（${md(ev.start)}）</span></div>`:""}${r.updatedAt&&r.updatedAt!==r.at?`<div><b>最後更新</b><span>${who(r.updatedBy)} · ${ago(r.updatedAt)}</span></div>`:""}</div>
+    <div class="field"><label>狀態</label><div class="seg statusseg" role="group">${Object.entries(ST).map(([k,[l]])=>`<button type="button" data-st="${k}" aria-pressed="${st===k}" ${S.canWrite?"":"disabled"}>${l}</button>`).join("")}</div></div>
+    <div class="field"><label for="rFix">處理紀錄</label><textarea id="rFix" rows="3" placeholder="例如：11/5 送原廠，換電源板" ${S.canWrite?"":"disabled"}>${esc(r.fixNote||"")}</textarea></div>
+    <p class="err" id="sErr" hidden></p>
+    ${S.canWrite?`<button type="button" class="danger" id="rDel">刪除這筆紀錄</button>`:""}`,{onSave:async()=>{
+      try{await db.collection("repairs").doc(id).update({status:st,fixNote:$("rFix").value.trim(),...stamp()});closeSheet();toast(st==="done"?"已修好，數量回到庫存":"已更新維修狀態")}catch(err){setErr(errMsg(err))}
+    }});
+  $("sBody").addEventListener("click",e=>{const b=e.target.closest("[data-st]");if(!b)return;st=b.dataset.st;$("sBody").querySelectorAll("[data-st]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.st===st))});
+  const del=$("rDel");if(del)del.onclick=async()=>{if(!arm(del,"再按一次確定刪除"))return;try{await db.collection("repairs").doc(id).delete();closeSheet();toast("已刪除紀錄")}catch(err){setErr(errMsg(err))}};
+  fillNames();
+}
+
+/* gear form */
+function openGearForm(id){
+  const g=id?S.gear.get(id):null;
+  const used=id?sortedEvents().filter(([,e])=>phase(e)!=="done"&&+(e.items||{})[id]>0).length:0;
+  mountSheet(id?"編輯器材":"新增器材",`
+    <div class="field"><label for="gName">器材名稱</label><input id="gName" value="${esc(g?.name||"")}" placeholder="例如：12 吋喇叭" autocomplete="off"></div>
+    <div class="row2"><div class="field"><label for="gQty">公司總數量</label><input id="gQty" inputmode="numeric" value="${hasQty(g)?g.qty:""}" placeholder="不確定先留空"></div>
+    <div class="field"><label for="gUnit">單位</label><input id="gUnit" value="${esc(g?.unit||"")}" placeholder="支、顆、台…" autocomplete="off"></div></div>
+    <div class="field"><label for="gCat">分類</label><select id="gCat">${CATS.map(c=>`<option ${c===(g?.category||(gTab==="cable"&&!g?"線材":"其他"))?"selected":""}>${c}</option>`).join("")}</select></div>
+    <div class="field"><label for="gNote">備註</label><input id="gNote" value="${esc(g?.note||"")}" placeholder="例如：放在 3 號櫃" autocomplete="off"></div>
+    <div class="field"><label for="gAlias">其他叫法（用逗號分開）</label><input id="gAlias" value="${esc((g?.aliases||[]).join("，"))}" placeholder="例如：別名一，別名二" autocomplete="off"><p class="hint">匯入清單時看到這些寫法，會自動對到這個器材。</p></div>
+    <p class="hint">填了總數量，排活動時就不能超過倉庫剩下的數量；留空就不限制。</p>
+    <p class="err" id="sErr" hidden></p>
+    ${id?`<button type="button" class="danger" id="gDel">刪除這項器材</button>${used?`<p class="hint">有 ${used} 場還沒歸還的活動用到它，刪除後那些清單會顯示「已刪除的設備」。</p>`:""}`:""}`,{onSave:async()=>{
+      const name=$("gName").value.trim();if(!name)return setErr("請填器材名稱。");
+      const dup=matchGear(name);if(dup&&dup!==id)return setErr("已經有這個名稱了。");
+      const raw=$("gQty").value.trim();let qty=null;if(raw){qty=Math.floor(+raw);if(!(qty>=0))return setErr("總數量要填 0 以上的整數，不確定可以留空。")}
+      const b={name,qty,category:$("gCat").value,unit:$("gUnit").value.trim(),note:$("gNote").value.trim(),aliases:$("gAlias").value.split(/[,，、]/).map(s=>s.trim()).filter(Boolean),...stamp()};
+      try{await (id?db.collection("gear").doc(id):db.collection("gear").doc()).set(b);closeSheet();toast(id?"已更新器材":"已新增器材")}catch(err){setErr(errMsg(err))}
+    }});
+  const del=$("gDel");if(del)del.onclick=async()=>{if(!arm(del,"再按一次確定刪除"))return;try{await db.collection("gear").doc(id).delete();closeSheet();toast("已刪除器材")}catch(err){setErr(errMsg(err))}};
+}
+
+/* ---------- 匯入：文字 / 截圖 ---------- */
+let imp={};
+function openImport({mode,eid,title,rows}){
+  imp={mode,eid,text:"",file:null,fileUrl:"",busy:false,ctl:null,rows:null,meta:{title:"",venue:"",start:todayStr(),end:todayStr(),note:""},err:""};
+  const e=eid?S.events.get(eid):null;
+  mountSheet(title||(mode==="add"?"匯入到「"+(e?.name||"")+"」":"從清單建立活動"),"",{save:mode==="add"?"加入":"建立",onSave:applyImport});
+  if(rows)takeResult({items:rows});else renderImport();
+}
+function impRange(){if(imp.mode==="add"){return rangeOf(S.events.get(imp.eid))}const m=imp.meta;return[validDate(m.start)?m.start:todayStr(),validDate(m.end)&&m.end>=m.start?m.end:m.start]}
+function impAvail(gid){const[s,en]=impRange();const av=availFor(gid,s,en,imp.mode==="add"?imp.eid:null);if(av===Infinity)return av;return Math.max(0,av-(imp.mode==="add"?+(S.events.get(imp.eid).items||{})[gid]||0:0))}
+function renderImport(){
+  const b=$("sBody");if(!b)return;
+  const save=$("sSave");if(save)save.hidden=!imp.rows;
+  if(!imp.rows&&imp.handoff){
+    b.innerHTML=`<ol class="steps-ol">
+        <li>按「複製提示詞」</li>
+        <li>打開手機上的 Claude 或 ChatGPT，貼上提示詞${imp.text.trim()?"":"，<b>再附上清單截圖</b>"}，送出</li>
+        <li>把 AI 的回覆整段複製，貼到下面，按「讀取回覆」</li></ol>
+      <button type="button" class="btn primary" data-imp="copy">複製提示詞</button>
+      <div class="field"><label for="iPrompt">提示詞（複製不了時，長按這裡全選複製）</label><textarea id="iPrompt" rows="3" readonly>${esc(aiPrompt())}</textarea></div>
+      <div class="field"><label for="iReply">貼上 AI 的回覆</label><textarea id="iReply" rows="6" placeholder='AI 會回一段 { "title": … "items": [ … ] }'>${esc(imp.reply||"")}</textarea></div>
+      <div class="btnrow"><button type="button" class="btn ghost" data-imp="unhand">‹ 返回</button><button type="button" class="btn primary" data-imp="readreply" ${(imp.reply||"").trim()?"":"disabled"}>讀取回覆</button></div>
+      ${imp.err?`<p class="err">${esc(imp.err)}</p>`:""}`;
+    const rp=$("iReply");rp.oninput=()=>{imp.reply=rp.value;b.querySelector('[data-imp="readreply"]').disabled=!rp.value.trim()};
+    return;
+  }
+  if(!imp.rows){
+    b.innerHTML=`<p class="hint">把 LINE 上的器材清單整段複製貼上。是截圖的話，在相簿裡長按文字就能選取複製（手機內建的文字辨識）。</p>
+      <div class="field"><label for="iText">貼上文字</label><textarea id="iText" rows="8" placeholder="例如：&#10;週年晚會&#10;控台*1&#10;喇叭*6 (6路)&#10;無線麥克風*16(手握)&#10;麥克風架*1箱">${esc(imp.text)}</textarea></div>
+      <div class="btnrow"><button type="button" class="btn primary" data-imp="local" ${imp.text.trim()?"":"disabled"}>快速整理文字</button><button type="button" class="btn" data-imp="hand">交給 AI</button></div>
+      <p class="hint">「快速整理」直接拆解「名稱*數量」這種格式。截圖讀不出字、或訊息太亂，按「交給 AI」，用你手機上的 Claude 或 ChatGPT 免費整理，再貼回來。</p>
+      ${imp.err?`<p class="err">${esc(imp.err)}</p>`:""}`;
+    const ta=$("iText");ta.oninput=()=>{imp.text=ta.value;b.querySelector('[data-imp="local"]').disabled=!imp.text.trim()};
+    return;
+  }
+  const m=imp.meta;
+  b.innerHTML=`${imp.mode==="new"?`<div class="field"><label for="mTitle">活動名稱</label><input id="mTitle" data-m="title" value="${esc(m.title)}" placeholder="例如：週年晚會" autocomplete="off"></div>
+    <div class="field"><label for="mVenue">場館</label><input id="mVenue" data-m="venue" list="venueNames" value="${esc(m.venue)}" autocomplete="off"></div>
+    <div class="row2"><div class="field"><label for="mStart">進場</label><input type="date" id="mStart" data-m="start" value="${esc(m.start)}"></div><div class="field"><label for="mEnd">撤場</label><input type="date" id="mEnd" data-m="end" value="${esc(m.end)}"></div></div>`:""}
+    <div class="sech" style="padding:0"><h2>整理出的器材（${imp.rows.length}）</h2><button type="button" class="link" data-imp="back">‹ 重新貼上</button></div>
+    <div class="list" id="iRows">${imp.rows.map((r,i)=>irow(r,i)).join("")}</div>
+    <button type="button" class="btn ghost" data-imp="addrow">＋ 加一行</button>
+    <p class="hint">「已有」會對到同一項器材，「新器材」會自動建立。紅色是超過倉庫這段期間剩下的數量，加入時會自動調到上限。</p>
+    <div class="field"><label for="mNote">${imp.mode==="new"?"活動備註":"要加到活動備註的內容"}</label><textarea id="mNote" data-m="note" rows="3">${esc(m.note)}</textarea></div>
+    <p class="err" id="sErr" hidden></p>`;
+}
+function itag(r){const gid=matchGear(r.name);if(!gid)return`<span class="tag new">新器材</span>`;const g=S.gear.get(gid);if(isNeed(g)&&mapNames(g.mapTo))return`<span class="tag old map">自動換成 → ${esc(Object.entries(expandNeed(gid,r.qty)||{}).map(([k,q])=>gName(k)+" ×"+q).join("、"))}</span>`;const av=impAvail(gid);if(av!==Infinity&&r.qty>av)return`<span class="tag low">剩 ${av}</span>`;return`<span class="tag old">已有</span>`}
+function irow(r,i){return`<div class="irow"><input class="iname" data-iname="${i}" value="${esc(r.name)}" list="gearNames" aria-label="器材名稱"><span data-itag="${i}">${itag(r)}</span>${stepperHtml("iq"+i,r.qty)}<button type="button" class="xbtn" data-idel="${i}" aria-label="刪除這行">×</button>${r.note?`<span class="inote">${esc(r.note)}</span>`:""}</div>`}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-imp],[data-idel]");if(!b||!$("sBody")||rs)return;
+  if(b.dataset.idel!=null){imp.rows.splice(+b.dataset.idel,1);renderImport();return}
+  const a=b.dataset.imp;
+  if(a==="local"){const r=parseText(imp.text);if(!r.items.length){imp.err="找不到「名稱*數量」這類格式的器材，試試 AI 整理，或手動調整文字。";renderImport();return}takeResult(r)}
+  if(a==="hand"){imp.handoff=true;imp.err="";renderImport()}
+  if(a==="unhand"){imp.handoff=false;imp.err="";renderImport()}
+  if(a==="copy")copyText(aiPrompt(),$("iPrompt"));
+  if(a==="readreply")readReply();
+  if(a==="back"){imp.rows=null;renderImport()}
+  if(a==="addrow"){imp.rows.push({name:"",qty:1,unit:"",category:"",note:""});renderImport();const l=document.querySelectorAll("[data-iname]");l[l.length-1]?.focus()}
+});
+document.addEventListener("input",e=>{
+  const t=e.target;if(!$("sBody")||!imp.rows||rs)return;
+  const retag=i=>{const el=document.querySelector(`[data-itag="${i}"]`);if(el)el.innerHTML=itag(imp.rows[i])};
+  if(t.dataset.iname!=null){const i=+t.dataset.iname;imp.rows[i].name=t.value;retag(i)}
+  if(/^iq\d+$/.test(t.id||"")){const i=+t.id.slice(2);imp.rows[i].qty=Math.max(1,Math.floor(+t.value)||1);retag(i)}
+  if(t.dataset.m){imp.meta[t.dataset.m]=t.value;if(t.dataset.m==="start"||t.dataset.m==="end")imp.rows.forEach((_,i)=>retag(i))}
+});
+function takeResult(r){
+  imp.err="";
+  imp.rows=r.items.map(x=>({name:String(x.name||"").trim(),qty:Math.max(1,Math.floor(+x.qty)||1),unit:String(x.unit||""),category:String(x.category||""),note:String(x.note||"")})).filter(x=>x.name);
+  const m=imp.meta;
+  if(r.title)m.title=r.title;if(r.venue)m.venue=r.venue;
+  if(validDate(r.start)){m.start=r.start;m.end=validDate(r.end)&&r.end>=r.start?r.end:r.start}
+  m.note=[m.note,r.note].filter(Boolean).join("\n");
+  renderImport();
+}
+function parseText(t){
+  const items=[],notes=[];let title="",ctx="";const seen=new Map();
+  const push=(name,qty,unit,note)=>{name=name.replace(/[：:]+$/,"").trim();if(!name)return;if(ctx)note=ctx+(note?"・"+note:"");const k=norm(name);if(seen.has(k)){const it=seen.get(k);it.qty+=qty;if(note&&!it.note.includes(note))it.note=[it.note,note].filter(Boolean).join("；");return}const it={name,qty,unit:UNITS.includes(unit)?unit:"",note:note||""};seen.set(k,it);items.push(it)};
+  t.split(/\r?\n/).forEach(raw=>{
+    const s=raw.replace(/^[\s•·●○▪\-–—☐□✓✔]+/,"").trim();
+    if(!s){ctx="";return}
+    let note="",core=s,m;
+    const pm=s.match(/[（(]([^()（）]*)[)）]\s*$/);if(pm){note=pm[1].trim();core=s.slice(0,pm.index).trim()}
+    if(/[:：]$/.test(core)&&core.length<=8){ctx=core.replace(/[:：]$/,"");return}
+    /* 無線(4手握，4腰包) → 「無線 手握」4、「無線 腰包」4（括號裡至少兩段「數量＋名稱」才拆） */
+    if(note&&core&&!/\d/.test(core)){const parts=note.split(/[，,、\/]/).map(x=>x.trim()).filter(Boolean),pm2=parts.map(x=>x.match(/^(\d+)\s*([^\d\s].{0,8})$/));if(parts.length>=2&&pm2.every(Boolean)){pm2.forEach(m=>push(core+" "+m[2],+m[1],"",""));return}}
+    if((m=core.match(/^(.+?)\s*[*＊×✕xX]\s*(\d+)\s*([^\d\s]{0,2})$/))){push(m[1],+m[2],m[3],note);return}
+    if((m=core.match(/^(\d+)\s*([^\d\s][^\s]{0,11})$/))){if(ctx){notes.push(`${ctx}：${m[2]} ×${m[1]}`);return}push(m[2],+m[1],"",note);return}
+    if(!title&&!items.length&&!/\d/.test(core)&&core.length<=10){title=core;if(note)notes.push(note);return}
+    if(/明天|今天|後天|出門|出發|集合|抓貨|進場|撤場|到場|裝台/.test(core)||(/\s/.test(core)&&/[一-鿿]/.test(core)&&core.length>6)){notes.push(s);return}
+    push(core,1,"",note);
+  });
+  return{title,items,note:notes.join("\n")};
+}
+/* 交給 AI：產生提示詞給使用者貼到自己的 Claude / ChatGPT，再把回覆貼回來（不花錢、不用 API 金鑰） */
+function aiPrompt(){
+  const names=[...S.gear.values()].flatMap(g=>[g.name,...(g.aliases||[])]).slice(0,400);
+  const hasText=!!imp.text.trim();
+  return`你是活動器材的倉管助理。請把${hasText?"下面的":"我附上的截圖裡的"}器材清單整理成 JSON。
+今天是 ${todayStr()}。
+公司已有的器材名稱（如果是同一個東西，name 請完全照抄這裡的寫法）：
+${names.length?names.join("、"):"（目前沒有）"}
+分類只能用：${CATS.join("、")}
+
+規則：
+- 每一種器材一筆：{"name":字串,"qty":整數,"unit":"支/顆/台/箱/片/套/組 之類，不確定就空字串","category":上面的分類之一,"note":"這項的補充說明，沒有就空字串"}
+- 數量常寫成「名稱*數量」「名稱x數量」「數量名稱」；沒寫數量就是 1。
+- 括號裡如果是在拆數量，例如「無線(4手握，4腰包)」，要拆成兩筆：「無線 手握」4 和「無線 腰包」4。
+- 括號裡如果只是說明（例如「(6路)」「(備用)」），寫進該筆的 note。
+- 說明用途的行（例如「收音：2把吉他」）不是器材，寫進相關器材的 note 或 eventNote。
+- 跟器材無關的訊息（出發時間、集合、聊天、地點連結）寫進 eventNote，不要變成器材。
+- 客戶寫的是需求（例如「人聲麥克風」「監聽喇叭」），就照客戶原本的寫法當 name，不要自己換成型號。
+- 盡量找出活動名稱 title、場館 venue、日期 start/end（YYYY-MM-DD，找不到就空字串）。日期如果是民國年要換成西元，例如 115/11/27 = 2026-11-27。
+只回 JSON，不要加任何說明文字，格式：{"title":"","venue":"","start":"","end":"","eventNote":"","items":[]}
+${hasText?"\n清單文字：\n"+imp.text.slice(0,8000):""}`;
+}
+function copyText(t,el){
+  const ok=()=>toast("已複製，去 AI App 貼上");
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(ok,()=>fallback());return}
+  fallback();
+  function fallback(){try{el.removeAttribute("readonly");el.focus();el.select();el.setSelectionRange(0,t.length);const r=document.execCommand("copy");el.setAttribute("readonly","");el.blur();r?ok():toast("請長按提示詞，全選後複製")}catch(_){toast("請長按提示詞，全選後複製")}}
+}
+function readReply(){
+  const raw=String(imp.reply||"").replace(/```(?:json)?/gi,""),a=raw.indexOf("{"),z=raw.lastIndexOf("}");
+  let r=null;try{if(a>=0&&z>a)r=JSON.parse(raw.slice(a,z+1))}catch(_){}
+  if(!r||!Array.isArray(r.items)){imp.err="讀不懂這段回覆。請確認有複製到 AI 回覆的整段 { … } 內容。";renderImport();return}
+  takeResult({title:r.title,venue:r.venue,start:r.start,end:r.end,note:r.eventNote,items:r.items});
+  if(!imp.rows.length){imp.rows=null;imp.err="AI 的回覆裡沒有器材，換一張比較清楚的截圖再試一次。";renderImport()}
+}
+async function applyImport(){
+  const rows=imp.rows.filter(r=>r.name.trim());
+  if(!rows.length)return setErr("沒有器材可以加入。");
+  const m=imp.meta;
+  if(imp.mode==="new"){if(!m.title.trim())return setErr("請填活動名稱。");if(!validDate(m.start)||!validDate(m.end))return setErr("請選進場和撤場日期。");if(m.end<m.start)return setErr("撤場日期要在進場日期之後。")}
+  try{
+    const add={},notes=[],clamped=[];
+    for(const r of rows){
+      const gid=await ensureGear(r.name,{category:r.category,unit:r.unit});
+      const exp=expandNeed(gid,r.qty);
+      for(const[k,q0]of Object.entries(exp||{[gid]:r.qty})){
+        const av=impAvail(k)-(add[k]||0);let q=q0;
+        if(av!==Infinity&&q>av){clamped.push(`${gName(k)} ${av}`);q=Math.max(0,av)}
+        if(q>0)add[k]=(add[k]||0)+q;
+      }
+      if(exp)notes.push(`客戶寫「${r.name}」×${r.qty} → ${Object.entries(exp).map(([k,q])=>gName(k)+" ×"+q).join("、")}`);
+      if(r.note)notes.push(`${r.name}：${r.note}`);
+    }
+    const note=[m.note.trim(),...notes].filter(Boolean).join("\n");
+    const msg=clamped.length?`庫存不夠，已調低：${clamped.join("、")}`:"";
+    if(imp.mode==="new"){
+      const ref=db.collection("events").doc();
+      await ref.set({name:m.title.trim(),venue:m.venue.trim(),start:m.start,end:m.end,note,phase:"pick",items:add,picked:{},pending:{},log:{},createdBy:S.me||null,...stamp()});
+      closeSheet();toast(msg||"已建立活動");evTab="pick";openDetail(ref.id);
+    }else{
+      const e=S.events.get(imp.eid),items={};for(const[g,q]of Object.entries(add))items[g]=(+(e.items||{})[g]||0)+q;
+      const upd={items,...stamp()};if(note)upd.note=[e.note,note].filter(Boolean).join("\n");
+      await evRef(imp.eid).update(upd);closeSheet();toast(msg||`已加入 ${Object.keys(add).length} 項器材`);render();
+    }
+  }catch(err){setErr(errMsg(err))}
+}
+
+/* ---------- 指定型號（客戶用語 → 實際器材） ---------- */
+function isNeed(g){return !!g&&g.kind==="need"}
+function mapNames(m){return Object.keys(m||{}).filter(k=>S.gear.has(k)&&+m[k]>0).map(k=>gName(k)).join("、")}
+function expandNeed(gid,qty){
+  const g=S.gear.get(gid),m=g&&g.mapTo;if(!isNeed(g)||!m)return null;
+  const ent=Object.entries(m).filter(([k,v])=>+v>0&&k!==gid&&S.gear.has(k));if(!ent.length)return null;
+  const T=ent.reduce((a,[,v])=>a+(+v),0),out={};let left=qty;
+  ent.forEach(([k,v],i)=>{const n=i===ent.length-1?left:Math.min(left,Math.round(qty*v/T));if(n>0)out[k]=n;left-=n});
+  return out;
+}
+function needChip(gid){
+  const g=S.gear.get(gid);if(!g||!S.canWrite)return"";
+  if(isNeed(g)&&mapNames(g.mapTo))return`<small class="chipline"><span class="badge pick">點一下換成：${esc(mapNames(g.mapTo))}</span></small>`;
+  if(!hasQty(g)&&g.kind!=="gear")return`<small class="chipline"><span class="badge pick">指定型號</span></small>`;
+  return"";
+}
+let mp=null;
+function openMap({eid,gid}){
+  const g=S.gear.get(gid);if(!g)return;const e=eid?S.events.get(eid):null;
+  const qty=e?(+(e.items||{})[gid]||0):1;
+  const pre=e?(expandNeed(gid,qty)||{}):{...(g.mapTo||{})};
+  mp={eid,gid,qty,alloc:pre,q:"",remember:true,busy:false,ctl:null};
+  mountSheet(e?"指定實際器材":"客戶用語對應","",{save:e?"套用":"儲存",onSave:saveMap});
+  renderMap();
+}
+function mpAllowed(id){
+  if(!mp.eid)return Infinity;const e=S.events.get(mp.eid),[s,en]=rangeOf(e),av=availFor(id,s,en,mp.eid);
+  return av===Infinity?Infinity:Math.max(0,av-(+(e.items||{})[id]||0));
+}
+function renderMap(){
+  const b=$("sBody");if(!b||!mp)return;const g=S.gear.get(mp.gid);if(!g){closeSheet();return}
+  b.innerHTML=`<div><div class="mphead">「${esc(g.name)}」${mp.eid?` <span class="num">×${mp.qty}</span>`:""}</div><p class="hint" style="margin-top:4px">${mp.eid?"這是清單上的寫法。選出實際要抓的器材和數量，這一行會被換掉。":"客戶寫這個名稱時，匯入會自動換成下面的器材；數字是分配比例。"}</p></div>
+    <div id="mProg"></div>
+    <div class="btnrow"><label class="search" style="flex:3">${IC.search}<input id="mQ" type="search" placeholder="搜尋公司器材，或輸入新型號" value="${esc(mp.q)}" autocomplete="off" aria-label="搜尋器材"></label>${sample?`<button type="button" class="btn" data-mai style="flex:1">${mp.busy?"讀取中…":"AI 建議"}</button>`:""}</div>
+    <div id="mList"></div>
+    ${mp.eid?`<label class="rem"><input type="checkbox" id="mRem" ${mp.remember?"checked":""}><span>以後看到「${esc(g.name)}」自動換成這些</span></label>`:""}
+    ${mp.eid&&!hasQty(g)&&!isNeed(g)?`<button type="button" class="link" data-mself style="align-self:flex-start">「${esc(g.name)}」本身就是實際器材，不用換</button>`:""}
+    ${!mp.eid&&isNeed(g)?`<button type="button" class="danger" id="mDel">取消這個對應</button>`:""}
+    <p class="err" id="sErr" hidden></p>`;
+  const r=$("mRem");if(r)r.onchange=()=>mp.remember=r.checked;
+  const d=$("mDel");if(d)d.onclick=async()=>{if(!arm(d,"再按一次確定取消"))return;const{mapTo,...rest}=S.gear.get(mp.gid);try{await db.collection("gear").doc(mp.gid).set({...rest,kind:"gear",...stamp()});closeSheet();toast("已取消對應")}catch(err){setErr(errMsg(err))}};
+  renderMapList();
+}
+function renderMapList(){
+  const g=S.gear.get(mp.gid),q=norm(mp.q),cat=g.category&&g.category!=="其他"?g.category:guessCat(g.name);
+  const sum=Object.values(mp.alloc).reduce((a,v)=>a+(+v||0),0);
+  const prog=$("mProg");if(prog)prog.innerHTML=mp.eid?`<div class="progress"><div class="top"><b class="${sum===mp.qty?"":""}">${sum} / ${mp.qty}</b><span>${sum===mp.qty?"數量對上了":sum<mp.qty?`還差 ${mp.qty-sum}`:`比清單多 ${sum-mp.qty}`}</span></div><div class="bar${sum>=mp.qty?" full":""}"><i style="width:${Math.min(100,mp.qty?sum/mp.qty*100:0)}%"></i></div></div>`:"";
+  let c=[...S.gear].filter(([id,x])=>id!==mp.gid&&!isNeed(x)&&(!q||norm(x.name).includes(q)||norm(x.category).includes(q)||(x.aliases||[]).some(a=>norm(a).includes(q))));
+  const rank=([id,x])=>(+mp.alloc[id]>0?0:x.category===cat?1:2);
+  c.sort((a,b)=>rank(a)-rank(b)||a[1].name.localeCompare(b[1].name,"zh-Hant"));
+  if(!q)c=c.slice(0,40);
+  const el=$("mList");if(!el)return;
+  el.innerHTML=(c.length?`<div class="list">${c.map(([id,x])=>{
+    const n=+mp.alloc[id]||0,al=mpAllowed(id),mx=al===Infinity?999:al;
+    const info=[x.category||"",mp.eid?(al===Infinity?"沒填庫存":`可用 ${al}`):(hasQty(x)?`共 ${x.qty}`:"")].filter(Boolean).join(" · ");
+    return`<div class="row${n?" chosen":""}"><span class="rn">${esc(x.name)}<small class="${mp.eid&&al!==Infinity&&n>=al?"cap low":""}">${esc(info)}</small></span><span class="stepper"><button type="button" data-mstep="-1" data-id="${esc(id)}" aria-label="減少" ${n?"":"disabled"}>−</button><input value="${n}" readonly tabindex="-1" aria-label="${esc(x.name)} 數量"><button type="button" data-mstep="1" data-id="${esc(id)}" aria-label="增加" ${n>=mx?"disabled":""}>+</button></span></div>`;
+  }).join("")}</div>`:`<div class="empty" style="padding:14px">${q?"公司器材裡找不到這個名稱":"公司器材清單還是空的"}</div>`)
+  +(q&&!matchGear(mp.q)?`<button type="button" class="btn ghost" data-mnew style="width:100%;margin-top:8px">＋ 新增「${esc(mp.q.trim())}」並使用</button>`:"");
+}
+document.addEventListener("input",e=>{if(e.target.id==="mQ"&&mp){mp.q=e.target.value;renderMapList()}});
+document.addEventListener("click",async e=>{
+  if(!mp||!$("mList"))return;
+  const s=e.target.closest("[data-mstep]");if(s){const id=s.dataset.id,al=mpAllowed(id),mx=al===Infinity?999:al;mp.alloc[id]=Math.max(0,Math.min(mx,(+mp.alloc[id]||0)+(+s.dataset.mstep)));if(!mp.alloc[id])delete mp.alloc[id];renderMapList();return}
+  if(e.target.closest("[data-mnew]")){const name=mp.q.trim();if(!name)return;try{const id=await ensureGear(name);await db.collection("gear").doc(id).update({kind:"gear"});const sum=Object.values(mp.alloc).reduce((a,v)=>a+(+v||0),0);mp.alloc[id]=Math.max(1,mp.qty-sum);mp.q="";$("mQ").value="";renderMapList()}catch(err){setErr(errMsg(err))}return}
+  if(e.target.closest("[data-mself]")){try{await db.collection("gear").doc(mp.gid).update({kind:"gear",...stamp()});closeSheet();toast("好，這項就照原名稱抓")}catch(err){setErr(errMsg(err))}return}
+  const ai=e.target.closest("[data-mai]");if(ai&&!mp.busy&&sample){
+    const g=S.gear.get(mp.gid);mp.busy=true;ai.textContent="讀取中…";ai.disabled=true;
+    const list=[...S.gear].filter(([id,x])=>id!==mp.gid&&!isNeed(x)).map(([id,x])=>`${x.name}（${x.category||"其他"}${mp.eid?(mpAllowed(id)===Infinity?"":`，可用 ${mpAllowed(id)}`):""}）`).slice(0,300).join("\n");
+    try{
+      const r=await sample.json(`你是活動器材的組長。客戶需求寫「${g.name}」${mp.eid?`，數量 ${mp.qty}`:""}。
+從下面的公司器材挑出實際要抓的器材和數量，名稱完全照抄清單，不能超過可用數量。沒有適合的就回空陣列。
+公司器材：
+${list||"（沒有）"}
+只回 JSON：{"items":[{"name":"","qty":0}]}`,{modelTier:"quick"});
+      const alloc={};for(const x of(r&&r.items)||[]){const id=matchGear(x.name);if(id&&id!==mp.gid&&!isNeed(S.gear.get(id))){const al=mpAllowed(id);alloc[id]=Math.max(1,Math.min(al===Infinity?999:al,Math.floor(+x.qty)||1))}}
+      if(Object.keys(alloc).length)mp.alloc=alloc;else toast("AI 在公司器材裡找不到適合的，請手動選。");
+    }catch(err){toast(err?.code==="rate_limited"?"AI 額度用完或太頻繁，稍後再試。":"AI 這次沒有建議成功，請手動選。")}
+    mp.busy=false;renderMap();
+  }
+});
+async function saveMap(){
+  const alloc=Object.fromEntries(Object.entries(mp.alloc).filter(([k,v])=>+v>0&&S.gear.has(k)));
+  if(!Object.keys(alloc).length)return setErr("至少選一項器材。");
+  const g=S.gear.get(mp.gid);
+  try{
+    if(mp.eid){
+      const e=S.events.get(mp.eid);
+      for(const k in alloc){const al=mpAllowed(k);if(al!==Infinity&&alloc[k]>al)return setErr(`${gName(k)} 這段期間最多只能再排 ${al}。`)}
+      const items={[mp.gid]:0},picked={[mp.gid]:false};
+      for(const k in alloc){items[k]=(+(e.items||{})[k]||0)+alloc[k];picked[k]=false}
+      await evRef(mp.eid).update({items,picked,...stamp()});
+      if(mp.remember)await db.collection("gear").doc(mp.gid).set({...g,kind:"need",mapTo:alloc,...stamp()});
+      closeSheet();toast(mp.remember?`已換成實際器材，下次「${g.name}」會自動換`:"已換成實際器材");
+    }else{
+      await db.collection("gear").doc(mp.gid).set({...g,kind:"need",mapTo:alloc,...stamp()});closeSheet();toast("已更新對應");
+    }
+    mp=null;
+  }catch(err){setErr(errMsg(err))}
+}
+
+/* ---------- boot ---------- */
+/* ---------- 備份／還原（測試版資料只在這支手機，記得偶爾備份） ---------- */
+function backupSec(){return`<section class="sec"><div class="sech"><h2>資料</h2></div><div class="list">
+  <button type="button" class="row" data-act="backup"><span class="rn">下載備份<small>把所有活動、器材、維修、範本存成一個檔案</small></span>${IC.chev}</button>
+  <label class="row" style="position:relative;cursor:pointer"><span class="rn">從備份還原<small>會用備份檔取代這支手機上的全部資料（範本檔則只加入範本）</small></span>${IC.chev}<input type="file" id="restoreFile" accept="application/json,.json" style="position:absolute;inset:0;opacity:0"></label>
+  </div></section>`}
+function doBackup(){
+  const blob=new Blob([JSON.stringify(LDB.dump(),null,1)],{type:"application/json"}),a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=`器材調度板備份-${todayStr()}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+document.addEventListener("click",e=>{if(e.target.closest('[data-act="backup"]'))doBackup()});
+document.addEventListener("change",async e=>{
+  if(e.target.id!=="restoreFile")return;const f=e.target.files[0];e.target.value="";if(!f)return;
+  let obj;try{obj=JSON.parse(await f.text())}catch(_){toast("這不是備份檔");return}
+  if(obj&&obj.merge===true){await mergeFile(obj,f.name);return}
+  if(obj&&isObj(obj.templates)&&!obj.gear&&!obj.events){const t=Object.entries(obj.templates).filter(([,v])=>v&&Array.isArray(v.items));if(!t.length){toast("檔案裡沒有範本");return}
+    if(!confirm(`要匯入 ${t.length} 個範本（${t.map(([k])=>k).join("、")}）嗎？同名範本會被取代，其他資料不動。`))return;
+    try{for(const[k,v]of t)await db.collection("templates").doc(k).set({...v,type:k,...stamp()});toast(`已匯入 ${t.length} 個範本`)}catch(_){toast("匯入失敗")}return}
+  if(!obj||typeof obj!=="object"||!obj.gear||!obj.events){toast("這不是器材調度板的備份檔");return}
+  if(!confirm(`要用「${f.name}」取代這支手機上的全部資料嗎？`))return;
+  try{await LDB.restore(obj);toast("已還原")}catch(_){toast("還原失敗")}
+});
+
+/* 合併匯入（merge:true）：只加沒有的器材、已有的只補別名；範本同名取代。活動和維修不動。 */
+async function mergeFile(obj,fname){
+  const gear=Object.values(isObj(obj.gear)?obj.gear:{}).filter(g=>g&&g.name),tpl=Object.entries(isObj(obj.templates)?obj.templates:{}).filter(([,v])=>v&&Array.isArray(v.items)),tn=tpl.map(([k])=>k).filter(k=>k!=="__types");
+  const plan=gear.map(g=>{const names=[g.name,...(g.aliases||[])];let id=null;for(const n of names){id=matchGear(n);if(id)break}return{g,id}});
+  const nNew=plan.filter(x=>!x.id).length,nOld=plan.length-nNew;
+  if(!plan.length&&!tpl.length){toast("檔案裡沒有可以匯入的東西");return}
+  if(!confirm(`要從「${fname}」加入：\n新器材 ${nNew} 項${nOld?`（另有 ${nOld} 項已經有了，只補別名）`:""}${tn.length?`\n範本 ${tn.length} 個（${tn.join("、")}，同名會取代）`:""}${tpl.length>tn.length?"\n活動性質清單":""}\n\n活動、數量、維修都不會動。`))return;
+  try{
+    for(const{g,id}of plan){
+      if(id){const cur=S.gear.get(id),have=new Set([cur.name,...(cur.aliases||[])].map(norm)),add=[g.name,...(g.aliases||[])].filter(n=>!have.has(norm(n)));
+        const upd={};if(add.length)upd.aliases=[...(cur.aliases||[]),...add];if(!cur.unit&&g.unit&&UNITS.includes(g.unit))upd.unit=g.unit;
+        if(Object.keys(upd).length)await db.collection("gear").doc(id).update({...upd,...stamp()})}
+      else await db.collection("gear").doc().set({name:String(g.name).trim(),category:CATS.includes(g.category)?g.category:guessCat(g.name),unit:UNITS.includes(g.unit)?g.unit:"",qty:null,note:String(g.note||""),aliases:(g.aliases||[]).filter(Boolean),...stamp()});
+    }
+    for(const[k,v]of tpl)await db.collection("templates").doc(k).set({...v,type:k,...stamp()});
+    toast(nNew||tn.length?`已加入 ${nNew} 項器材${tn.length?`、${tn.length} 個範本`:""}`:"已匯入");
+  }catch(_){toast("匯入失敗")}
+}
+/* 跨過午夜或從背景回來時重畫，讓「已抓好」到進場日自動變演出中 */
+let lastDay=todayStr();
+const dayCheck=()=>{if(todayStr()!==lastDay){lastDay=todayStr();render()}};
+setInterval(dayCheck,60000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)render()});
+if("serviceWorker"in navigator&&window.isSecureContext)navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+render();
+(async()=>{
+  try{await LDB.init();db=LDB}catch(e){console.error(e);S.dbOk=false;S.canWrite=false;S.loaded={g:1,e:1,r:1};render();return}
+  S.me="me";
+  S.dbOk=true;
+  const onErr=e=>{if(e&&e.code==="revoked"){S.dbOk=false;S.canWrite=false}render()};
+  db.collection("gear").onSnapshot(s=>{S.gear=new Map(s.docs.map(x=>[x.id,x.data()]));S.loaded.g=1;refreshLists();render();if(rs)renderReturn()},onErr);
+  db.collection("events").onSnapshot(s=>{S.events=new Map(s.docs.filter(x=>{const v=x.data();return validDate(v.start)&&validDate(v.end)}).map(x=>[x.id,x.data()]));S.loaded.e=1;refreshLists();render()},onErr);
+  db.collection("templates").onSnapshot(s=>{S.templates=new Map(s.docs.map(x=>[x.id,x.data()]));render()},onErr);
+  db.collection("repairs").onSnapshot(s=>{S.repairs=new Map(s.docs.map(x=>[x.id,x.data()]));S.loaded.r=1;render()},onErr);
+})();
+</script>
+</body>
+</html>
